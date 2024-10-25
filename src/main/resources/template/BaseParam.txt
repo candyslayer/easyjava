@@ -1,0 +1,54 @@
+public class BaseParam {
+    private SimplePage simplePage;
+    private Integer pageNo;
+    private Integer pageSize;
+    private String orderBy;
+    /**
+     * @return the simplePage
+     */
+    public SimplePage getSimplePage() {
+        return simplePage;
+    }
+    /**
+     * @param simplePage the simplePage to set
+     */
+    public void setSimplePage(SimplePage simplePage) {
+        this.simplePage = simplePage;
+    }
+    /**
+     * @return the pageNo
+     */
+    public Integer getPageNo() {
+        return pageNo;
+    }
+    /**
+     * @param pageNo the pageNo to set
+     */
+    public void setPageNo(Integer pageNo) {
+        this.pageNo = pageNo;
+    }
+    /**
+     * @return the pageSize
+     */
+    public Integer getPageSize() {
+        return pageSize;
+    }
+    /**
+     * @param pageSize the pageSize to set
+     */
+    public void setPageSize(Integer pageSize) {
+        this.pageSize = pageSize;
+    }
+    /**
+     * @return the orderBy
+     */
+    public String getOrderBy() {
+        return orderBy;
+    }
+    /**
+     * @param orderBy the orderBy to set
+     */
+    public void setOrderBy(String orderBy) {
+        this.orderBy = orderBy;
+    }
+}
