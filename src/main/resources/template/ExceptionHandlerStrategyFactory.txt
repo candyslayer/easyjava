@@ -1,0 +1,20 @@
+
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+
+//通过自动装配将所有策略类注入到 List 中。工厂类负责根据异常类型选择合适的策略来处理异常
+@Component
+public class ExceptionHandlerStrategyFactory {
+    private final List<ExceptionHandlerStrategy> strategies;
+
+    //将异常策略装配入工厂
+    public ExceptionHandlerStrategyFactory(List<ExceptionHandlerStrategy> strategies) {
+        this.strategies = strategies;
+    }
+
+    public ExceptionHandlerStrategy getStrategy(Exception e) {
+        return strategies.stream().filter(strategy -> strategy.Support(e)).findFirst()
+                .orElse(new DefaultExceptionStrategy());
+    }
+}

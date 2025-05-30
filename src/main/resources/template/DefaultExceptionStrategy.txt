@@ -1,0 +1,23 @@
+
+
+import jakarta.servlet.http.HttpServletRequest;
+
+//异常的默认处理，当作服务端出错
+@SuppressWarnings({ "rawtypes" })
+public class DefaultExceptionStrategy implements ExceptionHandlerStrategy{
+
+    @Override
+    public Boolean Support(Exception e) {
+        return false;
+    }
+
+    @Override
+    public ResponseVO HandleException(Exception e, HttpServletRequest request) {
+        ResponseVO ajaxResponse = new ResponseVO<>();
+        ajaxResponse.setCode(ResponseCodeEnum.CODE_500.getCode());
+        ajaxResponse.setInfo(ResponseCodeEnum.CODE_500.getMsg());
+        ajaxResponse.setStatus("error");
+        return ajaxResponse;
+    }
+
+}

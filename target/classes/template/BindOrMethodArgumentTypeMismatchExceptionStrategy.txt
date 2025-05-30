@@ -1,0 +1,32 @@
+
+import java.net.BindException;
+
+import org.springframework.stereotype.Component;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+//处理方法或者请求参数不匹配
+@Component
+@SuppressWarnings({ "rawtypes" })
+public class BindOrMethodArgumentTypeMismatchExceptionStrategy implements ExceptionHandlerStrategy{
+
+    @Override
+    public Boolean Support(Exception e) {
+        if (e instanceof BindException || e instanceof MethodArgumentTypeMismatchException) {
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public ResponseVO HandleException(Exception e, HttpServletRequest request) {
+        ResponseVO ajaxResponse = new ResponseVO<>();
+        ajaxResponse.setCode(ResponseCodeEnum.CODE_600.getCode());
+        ajaxResponse.setInfo(ResponseCodeEnum.CODE_600.getMsg());
+        ajaxResponse.setStatus("error");
+        return ajaxResponse;
+    }
+
+}

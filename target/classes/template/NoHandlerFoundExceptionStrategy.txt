@@ -1,0 +1,25 @@
+
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.NoHandlerFoundException;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+@Component
+@SuppressWarnings({ "rawtypes" })
+public class NoHandlerFoundExceptionStrategy implements ExceptionHandlerStrategy{
+
+    @Override
+    public Boolean Support(Exception e) {
+        return e instanceof NoHandlerFoundException;
+    }
+
+    @Override
+    public ResponseVO HandleException(Exception e, HttpServletRequest request) {
+        ResponseVO ajaxResponse = new ResponseVO<>();
+        ajaxResponse.setCode(ResponseCodeEnum.CODE_404.getCode());
+        ajaxResponse.setInfo(ResponseCodeEnum.CODE_404.getMsg());
+        ajaxResponse.setStatus("error");
+        return ajaxResponse;
+    }
+
+}

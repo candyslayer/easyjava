@@ -1,0 +1,27 @@
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Component;
+
+import jakarta.servlet.http.HttpServletRequest;
+
+//处理主键冲突异常
+@Component
+@SuppressWarnings({ "rawtypes" })
+public class DuplicateKeyExceptionStrategy implements ExceptionHandlerStrategy{
+
+    @Override
+    public Boolean Support(Exception e) {
+        
+        return e instanceof DuplicateKeyException;
+    }
+
+    @Override
+    public ResponseVO HandleException(Exception e, HttpServletRequest request) {
+
+        ResponseVO ajaxResponse = new ResponseVO<>();
+        ajaxResponse.setCode(ResponseCodeEnum.CODE_601.getCode());
+        ajaxResponse.setInfo(ResponseCodeEnum.CODE_601.getMsg());
+        ajaxResponse.setStatus("error");
+        return ajaxResponse;
+    }
+
+}

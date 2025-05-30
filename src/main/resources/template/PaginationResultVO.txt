@@ -1,0 +1,123 @@
+import java.util.ArrayList;
+import java.util.List;
+
+public class PaginationResultVO<T> {
+    private Integer totalCount;
+    private Integer pageNO;
+    private Integer pageSize;
+    private Integer pageTotal;
+    private List<T> list = new ArrayList<>();
+
+    /**
+     * @param totalCount
+     * @param pageNO
+     * @param pageSize
+     * @param list
+     */
+    public PaginationResultVO(Integer totalCount, Integer pageNO, Integer pageSize, List<T> list) {
+        this.totalCount = totalCount;
+        this.pageNO = pageNO;
+        this.pageSize = pageSize;
+        this.list = list;
+    }
+
+    /**
+     * @param totalCount
+     * @param pageNO
+     * @param pageSize
+     * @param pageTotal
+     * @param list
+     */
+    public PaginationResultVO(Integer totalCount, Integer pageNO, Integer pageSize, Integer pageTotal, List<T> list) {
+
+        if (pageNO == 0) {
+            pageNO = 1;
+        }
+
+        this.totalCount = totalCount;
+        this.pageNO = pageNO;
+        this.pageSize = pageSize;
+        this.pageTotal = pageTotal;
+        this.list = list;
+    }
+
+    public PaginationResultVO(List<T> list) {
+        this.list = list;
+    }
+    
+    public PaginationResultVO() {
+
+    }
+
+    /**
+     * @return the totalCount
+     */
+    public Integer getTotalCount() {
+        return totalCount;
+    }
+
+    /**
+     * @param totalCount the totalCount to set
+     */
+    public void setTotalCount(Integer totalCount) {
+        this.totalCount = totalCount;
+    }
+
+    /**
+     * @return the pageNO
+     */
+    public Integer getPageNO() {
+        return pageNO;
+    }
+
+    /**
+     * @param pageNO the pageNO to set
+     */
+    public void setPageNO(Integer pageNO) {
+        this.pageNO = pageNO;
+    }
+
+    /**
+     * @return the pageSize
+     */
+    public Integer getPageSize() {
+        return pageSize;
+    }
+
+    /**
+     * @param pageSize the pageSize to set
+     */
+    public void setPageSize(Integer pageSize) {
+        this.pageSize = pageSize;
+    }
+
+    /**
+     * @return the pageTotal
+     */
+    public Integer getPageTotal() {
+        return pageTotal;
+    }
+
+    /**
+     * @param pageTotal the pageTotal to set
+     */
+    public void setPageTotal(Integer pageTotal) {
+        this.pageTotal = pageTotal;
+    }
+
+    /**
+     * @return the list
+     */
+    public List<T> getList() {
+        return list;
+    }
+
+    /**
+     * @param list the list to set
+     */
+    public void setList(List<T> list) {
+        this.list = list;
+    }
+    
+    
+}

@@ -1,0 +1,31 @@
+import java.net.BindException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import jakarta.servlet.http.HttpServletRequest;
+
+//统一处理错误信息
+@RestControllerAdvice
+public class AGlobalExceptionHandlerController extends AbaseController {
+    private static final Logger log = LoggerFactory.getLogger(AGlobalExceptionHandlerController.class);
+
+    private final ExceptionHandlerStrategyFactory strategyFactory;
+
+    public AGlobalExceptionHandlerController(ExceptionHandlerStrategyFactory strategyFactory) {
+        this.strategyFactory = strategyFactory;
+    }
+
+    @ExceptionHandler(value = Exception.class)
+    Object HandleException(Exception e, HttpServletRequest request) {
+        log.error("请求错误，请求地址{}，错误信息：", request.getRequestURL(), e);
+        
+        ExceptionHandlerStrategy strategy = strategyFactory.getStrategy(e);
+
+        return strategy.HandleException(e, request);
+    }
+
+}

@@ -1,0 +1,12 @@
+import jakarta.servlet.http.HttpServletRequest;
+
+/** 
+ * 异常策略接口
+ */
+@SuppressWarnings("rawtypes")
+public interface ExceptionHandlerStrategy {
+    // 判断当前策略是否支持处理传入的异常
+    Boolean Support(Exception e);
+    // 用于处理异常并返回响应对象。
+    ResponseVO HandleException(Exception e, HttpServletRequest request);
+}
