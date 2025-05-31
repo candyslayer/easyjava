@@ -189,7 +189,8 @@ public class BuildMapperXML {
                                 + " >= str_to_date(#{query."
                                 + fieldInfo.getPropertyName() + "},'%Y-%m-%d')]]>";
                     } else {
-                        andWhere = "<![CDATA[ and " + fieldInfo.getFieldName() + " <= date_add(str_to_date(#{query."
+                        andWhere = "<![CDATA[ and " + tableAlias + "."
+                                + fieldInfo.getFieldName() + " <= date_add(str_to_date(#{query."
                                 + fieldInfo.getPropertyName() + "},'%Y-%m-%d'),interval -1 day)]]>";
                     }
                 }
