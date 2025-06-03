@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 //统一处理错误信息
 @RestControllerAdvice
-public class AGlobalExceptionHandlerController extends AbaseController {
+public class AGlobalExceptionHandlerController {
     private static final Logger log = LoggerFactory.getLogger(AGlobalExceptionHandlerController.class);
 
     private final ExceptionHandlerStrategyFactory strategyFactory;
