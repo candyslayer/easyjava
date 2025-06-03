@@ -36,5 +36,10 @@ public interface BaseMapper<T, P> {
     /*
      * SelectCount:(根据参数删除记录)
      */
-    void DeleteByParam(@Param("query") P p);    
+    void DeleteByParam(@Param("query") P p);
+
+    /*
+     * UpdateByParam:(根据参数更新记录)
+     */
+    Integer UpdateByParam(@Param("bean") T t, @Param("query") P p);
 }

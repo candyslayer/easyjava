@@ -549,6 +549,31 @@ public class BuildMapperXML {
                 bw.newLine();
             }
 
+            // 添加根据参数更新记录
+            bw.write("\t<!-- 根据参数更新记录 --> ");
+            bw.newLine();
+            bw.write("\t<update id=\"UpdateByParam\" parameterType=\"" + Constants.PACKAGE_PO + "." + tableInfo.getBeanName() + "\">");
+            bw.newLine();
+            bw.write("\t\tupdate " + tableInfo.getTableName() + " " + tableAlias);
+            bw.newLine();
+            bw.write("\t\t<set>");
+            bw.newLine();
+            for (FieldInfo fInfo : tableInfo.getFieldList()) {
+                bw.write("\t\t\t<if test = \"bean." + fInfo.getPropertyName() + " != null\">");
+                bw.newLine();
+                bw.write("\t\t\t\t" + tableAlias + "." + fInfo.getFieldName() + " = #{bean." + fInfo.getPropertyName() + "},");
+                bw.newLine();
+                bw.write("\t\t\t</if>");
+                bw.newLine();
+            }
+            bw.write("\t\t</set>");
+            bw.newLine();
+            bw.write("\t\t<include refid=\"" + QUERY_CONDITION + "\"/>");
+            bw.newLine();
+            bw.write("\t</update>");
+            bw.newLine();
+            bw.newLine();
+
             bw.write("</mapper>");
 
             bw.flush();
