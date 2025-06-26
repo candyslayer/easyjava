@@ -20,7 +20,7 @@ public class BusinessExceptionStrategy implements ExceptionHandlerStrategy {
         BusinessException biz = (BusinessException) e;
 
         ajaxResponse.setCode(biz.getCode() == null ? ResponseCodeEnum.CODE_600.getCode() : biz.getCode());
-        ajaxResponse.setData(biz.getMessage());
+        ajaxResponse.setInfo(biz.getMessage());
         ajaxResponse.setStatus("error");
         
         return ajaxResponse;

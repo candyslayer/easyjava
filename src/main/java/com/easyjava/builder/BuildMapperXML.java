@@ -292,7 +292,7 @@ public class BuildMapperXML {
 
             if (autoIncrement != null) {
                 bw.write("\t\t<selectKey keyProperty=\"bean." + autoIncrement.getPropertyName()
-                        + "\" resultType=\"Integer\" order=\"AFTER\">\r\n" + //
+                        + "\" resultType=\"" + autoIncrement.getJavaType() + "\" order=\"AFTER\">\r\n" + //
                         "\t\t\tselect LAST_INSERT_ID()\r\n" + //
                         "\t\t</selectKey>");
                 bw.newLine();
@@ -552,7 +552,8 @@ public class BuildMapperXML {
             // 添加根据参数更新记录
             bw.write("\t<!-- 根据参数更新记录 --> ");
             bw.newLine();
-            bw.write("\t<update id=\"UpdateByParam\" parameterType=\"" + Constants.PACKAGE_PO + "." + tableInfo.getBeanName() + "\">");
+            bw.write("\t<update id=\"UpdateByParam\" parameterType=\"" + Constants.PACKAGE_PO + "."
+                    + tableInfo.getBeanName() + "\">");
             bw.newLine();
             bw.write("\t\tupdate " + tableInfo.getTableName() + " " + tableAlias);
             bw.newLine();
@@ -561,7 +562,8 @@ public class BuildMapperXML {
             for (FieldInfo fInfo : tableInfo.getFieldList()) {
                 bw.write("\t\t\t<if test = \"bean." + fInfo.getPropertyName() + " != null\">");
                 bw.newLine();
-                bw.write("\t\t\t\t" + tableAlias + "." + fInfo.getFieldName() + " = #{bean." + fInfo.getPropertyName() + "},");
+                bw.write("\t\t\t\t" + tableAlias + "." + fInfo.getFieldName() + " = #{bean." + fInfo.getPropertyName()
+                        + "},");
                 bw.newLine();
                 bw.write("\t\t\t</if>");
                 bw.newLine();
