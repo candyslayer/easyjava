@@ -49,6 +49,13 @@ public class AppEnhanced {
             return;
         }
         
+        // 检查是否启动分表配置
+        if (args.length > 0 && "sharding".equalsIgnoreCase(args[0])) {
+            System.out.println("启动分表管理器...");
+            com.easyjava.manager.ShardingManager.main(new String[]{"config"});
+            return;
+        }
+        
         // 检查是否从文件加载配置
         if (args.length > 1 && "--config".equalsIgnoreCase(args[0])) {
             DynamicConfigManager.loadConfigurationFromFile(args[1]);
@@ -273,7 +280,13 @@ public class AppEnhanced {
         System.out.println("使用方法:");
         System.out.println("  java -jar easyjava.jar [选项]");
         System.out.println("");
-        System.out.println("选项:");
+        System.out.println("功能模式:");
+        System.out.println("  config          启动交互式配置");
+        System.out.println("  template        启动模板管理工具");
+        System.out.println("  sharding        启动分表配置管理器");
+        System.out.println("  --show-config   显示当前配置信息");
+        System.out.println("");
+        System.out.println("生成选项:");
         System.out.println("  --full          生成完整代码（包括测试和文档）");
         System.out.println("  --basic         只生成基础代码");
         System.out.println("  --incremental   启用增量生成");
@@ -285,7 +298,14 @@ public class AppEnhanced {
         System.out.println("  --help          显示此帮助信息");
         System.out.println("");
         System.out.println("示例:");
+        System.out.println("  java -jar easyjava.jar config");
+        System.out.println("  java -jar easyjava.jar sharding");
         System.out.println("  java -jar easyjava.jar --full --incremental");
         System.out.println("  java -jar easyjava.jar --basic --overwrite");
+        System.out.println("");
+        System.out.println("分表功能:");
+        System.out.println("  支持多种分表策略：hash、mod、range、time");
+        System.out.println("  支持跨表字段分表和自动创建分表");
+        System.out.println("  详细文档请参考：docs/分表功能文档.md");
     }
 }

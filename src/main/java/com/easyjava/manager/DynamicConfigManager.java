@@ -31,6 +31,8 @@ public class DynamicConfigManager {
     static {
         initializeValidators();
         initializeDefaultValues();
+        initializeShardingValidators();
+        initializeShardingDefaults();
     }
 
     /**
@@ -78,6 +80,37 @@ public class DynamicConfigManager {
 
         defaultValues.put("auther.comment", "EasyJava");
         defaultValues.put("ignore.table.prefix", "true");
+    }
+
+    /**
+     * 初始化分表配置验证规则
+     */
+    private static void initializeShardingValidators() {
+        // 分表数量验证（1-1024）
+        configValidators.put("sharding.table.count",
+                Pattern.compile("^(?:[1-9]|[1-9][0-9]|[1-9][0-9]{2}|10(?:[0-1][0-9]|2[0-4]))$"));
+        
+        // 分表策略类型验证
+        configValidators.put("sharding.strategy.type",
+                Pattern.compile("^(hash|mod|range|time)$"));
+        
+        // 分表后缀格式验证
+        configValidators.put("sharding.table.suffix.format",
+                Pattern.compile("^[_-]%[sd]$"));
+    }
+
+    /**
+     * 初始化分表默认配置值
+     */
+    private static void initializeShardingDefaults() {
+        defaultValues.put("sharding.enabled", "false");
+        defaultValues.put("sharding.strategy.type", "hash");
+        defaultValues.put("sharding.table.count", "8");
+        defaultValues.put("sharding.table.suffix.format", "_%d");
+        defaultValues.put("sharding.database.write.enabled", "true");
+        defaultValues.put("sharding.sql.generate.enabled", "true");
+        defaultValues.put("sharding.sql.create.prefix", "CREATE TABLE IF NOT EXISTS");
+        defaultValues.put("sharding.auto.create.table", "true");
     }
 
     /**
@@ -337,6 +370,365 @@ public class DynamicConfigManager {
     }
 
     /**
+     * 交互式配置分表功能
+     */
+    public static void configureSharding() {
+        try (Scanner scanner = new Scanner(System.in)) {
+            System.out.println("\n=== 动态分表配置 ===");
+            
+            // 1. 分表开关配置
+            System.out.print("是否启用分表功能? (y/n) [n]: ");
+            String enableSharding = scanner.nextLine().trim();
+            boolean shardingEnabled = "y".equalsIgnoreCase(enableSharding) || "yes".equalsIgnoreCase(enableSharding);
+            setRuntimeConfig("sharding.enabled", String.valueOf(shardingEnabled));
+            
+            if (!shardingEnabled) {
+                System.out.println("✅ 分表功能已禁用");
+                return;
+            }
+            
+            // 2. 分表策略配置
+            System.out.println("\n可选分表策略:");
+            System.out.println("1. hash - 哈希分表 (推荐)");
+            System.out.println("2. mod - 取模分表");
+            System.out.println("3. range - 范围分表");
+            System.out.println("4. time - 时间分表");
+            
+            System.out.print("请选择分表策略 (1-4) [1]: ");
+            String strategyChoice = scanner.nextLine().trim();
+            String strategy = "hash";
+            switch (strategyChoice) {
+                case "2":
+                    strategy = "mod";
+                    break;
+                case "3":
+                    strategy = "range";
+                    break;
+                case "4":
+                    strategy = "time";
+                    break;
+                default:
+                    strategy = "hash";
+                    break;
+            }
+            setRuntimeConfig("sharding.strategy.type", strategy);
+            System.out.println("选择的分表策略: " + strategy);
+            
+            // 3. 分表数量配置
+            System.out.print("请输入分表数量 (1-1024) [8]: ");
+            String tableCountStr = scanner.nextLine().trim();
+            int tableCount = 8;
+            if (!tableCountStr.isEmpty()) {
+                try {
+                    tableCount = Integer.parseInt(tableCountStr);
+                    if (tableCount < 1 || tableCount > 1024) {
+                        System.out.println("分表数量超出范围，使用默认值: 8");
+                        tableCount = 8;
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("输入格式错误，使用默认值: 8");
+                    tableCount = 8;
+                }
+            }
+            setRuntimeConfig("sharding.table.count", String.valueOf(tableCount));
+            System.out.println("分表数量: " + tableCount);
+            
+            // 4. 配置跨表字段分表映射
+            System.out.println("\n=== 配置跨表字段分表映射 ===");
+            System.out.println("示例: 通过用户表的id来构建信息表的分表");
+            System.out.println("格式: 目标表名=源表名.字段名");
+            System.out.println("输入 'done' 完成配置，'skip' 跳过");
+            
+            int mappingCount = 1;
+            while (true) {
+                System.out.print("映射配置 " + mappingCount + ": ");
+                String input = scanner.nextLine().trim();
+                
+                if ("done".equalsIgnoreCase(input)) {
+                    break;
+                } else if ("skip".equalsIgnoreCase(input)) {
+                    System.out.println("跳过跨表字段分表映射配置");
+                    break;
+                }
+                
+                if (input.isEmpty()) {
+                    continue;
+                }
+                
+                if (input.contains("=") && input.contains(".")) {
+                    String[] parts = input.split("=", 2);
+                    if (parts.length == 2) {
+                        String targetTable = parts[0].trim();
+                        String sourceMapping = parts[1].trim();
+                        
+                        if (sourceMapping.matches("\\w+\\.\\w+")) {
+                            setRuntimeConfig("sharding.mapping." + targetTable, sourceMapping);
+                            System.out.println("✅ 添加映射: " + targetTable + " -> " + sourceMapping);
+                            mappingCount++;
+                        } else {
+                            System.out.println("❌ 格式错误，正确格式: 表名.字段名");
+                        }
+                    } else {
+                        System.out.println("❌ 格式错误，正确格式: 目标表名=源表名.字段名");
+                    }
+                } else {
+                    System.out.println("❌ 格式错误，正确格式: 目标表名=源表名.字段名");
+                }
+            }
+            
+            // 5. 配置分表字段
+            System.out.println("\n=== 配置分表字段 ===");
+            System.out.println("格式: 表名=分表字段名");
+            System.out.println("输入 'done' 完成配置，'skip' 跳过");
+            
+            int fieldCount = 1;
+            while (true) {
+                System.out.print("分表字段配置 " + fieldCount + ": ");
+                String input = scanner.nextLine().trim();
+                
+                if ("done".equalsIgnoreCase(input)) {
+                    break;
+                } else if ("skip".equalsIgnoreCase(input)) {
+                    System.out.println("跳过分表字段配置");
+                    break;
+                }
+                
+                if (input.isEmpty()) {
+                    continue;
+                }
+                
+                if (input.contains("=")) {
+                    String[] parts = input.split("=", 2);
+                    if (parts.length == 2) {
+                        String tableName = parts[0].trim();
+                        String fieldName = parts[1].trim();
+                        
+                        if (!tableName.isEmpty() && !fieldName.isEmpty()) {
+                            setRuntimeConfig("sharding.field." + tableName, fieldName);
+                            System.out.println("✅ 添加分表字段: " + tableName + " -> " + fieldName);
+                            fieldCount++;
+                        } else {
+                            System.out.println("❌ 表名和字段名不能为空");
+                        }
+                    } else {
+                        System.out.println("❌ 格式错误，正确格式: 表名=字段名");
+                    }
+                } else {
+                    System.out.println("❌ 格式错误，正确格式: 表名=字段名");
+                }
+            }
+            
+            // 6. 数据库写入配置
+            System.out.print("\n是否启用分表写入数据库? (y/n) [y]: ");
+            String enableDbWrite = scanner.nextLine().trim();
+            boolean dbWriteEnabled = enableDbWrite.isEmpty() || "y".equalsIgnoreCase(enableDbWrite);
+            setRuntimeConfig("sharding.database.write.enabled", String.valueOf(dbWriteEnabled));
+            
+            if (dbWriteEnabled) {
+                System.out.print("是否自动创建分表? (y/n) [y]: ");
+                String autoCreate = scanner.nextLine().trim();
+                boolean autoCreateEnabled = autoCreate.isEmpty() || "y".equalsIgnoreCase(autoCreate);
+                setRuntimeConfig("sharding.auto.create.table", String.valueOf(autoCreateEnabled));
+                
+                System.out.println("数据库写入: 启用");
+                System.out.println("自动创建分表: " + (autoCreateEnabled ? "启用" : "禁用"));
+            } else {
+                System.out.println("数据库写入: 禁用");
+                setRuntimeConfig("sharding.auto.create.table", "false");
+            }
+            
+            // 7. 保存配置
+            System.out.print("\n是否保存分表配置到文件? (y/n) [y]: ");
+            String saveConfig = scanner.nextLine().trim();
+            if (saveConfig.isEmpty() || "y".equalsIgnoreCase(saveConfig)) {
+                saveShardingConfigurationToFile();
+            }
+            
+            System.out.println("\n✅ 分表配置完成！");
+            showShardingConfiguration();
+            
+        } catch (Exception e) {
+            logger.error("分表配置过程中发生错误", e);
+            System.out.println("❌ 分表配置失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 显示当前分表配置
+     */
+    public static void showShardingConfiguration() {
+        System.out.println("\n=== 当前分表配置 ===");
+        
+        String enabled = getRuntimeConfig("sharding.enabled");
+        System.out.println("分表功能: " + ("true".equals(enabled) ? "启用" : "禁用"));
+        
+        if ("true".equals(enabled)) {
+            String strategy = getRuntimeConfig("sharding.strategy.type");
+            String count = getRuntimeConfig("sharding.table.count");
+            String dbWrite = getRuntimeConfig("sharding.database.write.enabled");
+            String autoCreate = getRuntimeConfig("sharding.auto.create.table");
+            
+            System.out.println("分表策略: " + (strategy != null ? strategy : "hash"));
+            System.out.println("分表数量: " + (count != null ? count : "8"));
+            System.out.println("数据库写入: " + ("true".equals(dbWrite) ? "启用" : "禁用"));
+            System.out.println("自动创建分表: " + ("true".equals(autoCreate) ? "启用" : "禁用"));
+            
+            // 显示分表映射配置
+            System.out.println("\n跨表字段分表映射:");
+            boolean hasMapping = false;
+            for (String key : runtimeConfig.keySet()) {
+                if (key.startsWith("sharding.mapping.")) {
+                    String tableName = key.substring("sharding.mapping.".length());
+                    String mapping = runtimeConfig.get(key);
+                    System.out.println("  " + tableName + " -> " + mapping);
+                    hasMapping = true;
+                }
+            }
+            if (!hasMapping) {
+                System.out.println("  (无配置)");
+            }
+            
+            // 显示分表字段配置
+            System.out.println("\n分表字段配置:");
+            boolean hasField = false;
+            for (String key : runtimeConfig.keySet()) {
+                if (key.startsWith("sharding.field.")) {
+                    String tableName = key.substring("sharding.field.".length());
+                    String fieldName = runtimeConfig.get(key);
+                    System.out.println("  " + tableName + " -> " + fieldName);
+                    hasField = true;
+                }
+            }
+            if (!hasField) {
+                System.out.println("  (无配置)");
+            }
+        }
+        System.out.println("========================\n");
+    }
+    
+    /**
+     * 保存分表配置到文件
+     */
+    private static void saveShardingConfigurationToFile() {
+        try {
+            // 读取现有配置
+            Properties props = new Properties();
+            try (InputStream is = DynamicConfigManager.class.getClassLoader().getResourceAsStream("application.properties")) {
+                if (is != null) {
+                    props.load(new InputStreamReader(is, StandardCharsets.UTF_8));
+                }
+            }
+            
+            // 更新分表配置
+            for (Map.Entry<String, String> entry : runtimeConfig.entrySet()) {
+                if (entry.getKey().startsWith("sharding.")) {
+                    props.setProperty(entry.getKey(), entry.getValue());
+                }
+            }
+            
+            // 写入配置文件
+            String configPath = DynamicConfigManager.class.getClassLoader().getResource("application.properties").getPath();
+            try (FileOutputStream fos = new FileOutputStream(configPath);
+                 OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
+                
+                props.store(osw, "Updated sharding configuration - " + new java.util.Date());
+                logger.info("分表配置已保存到配置文件");
+                System.out.println("✅ 分表配置已保存");
+            }
+            
+        } catch (Exception e) {
+            logger.error("保存分表配置失败", e);
+            System.out.println("❌ 保存分表配置失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 配置分表映射（跨表字段分表）
+     */
+    private static void configureShardingMappings(Scanner scanner) {
+        System.out.println("\n=== 配置跨表字段分表映射 ===");
+        System.out.println("示例：通过用户表的id字段为订单表分表");
+        System.out.println("格式：目标表名=源表名.字段名");
+        System.out.println("如：order_table=user_table.id");
+        System.out.println("输入空行完成配置");
+        
+        int mappingCount = 0;
+        while (true) {
+            System.out.print("分表映射 " + (mappingCount + 1) + " (目标表名=源表名.字段名): ");
+            String mapping = scanner.nextLine().trim();
+            
+            if (mapping.isEmpty()) {
+                break;
+            }
+            
+            if (mapping.contains("=") && mapping.contains(".")) {
+                String[] parts = mapping.split("=", 2);
+                if (parts.length == 2) {
+                    String targetTable = parts[0].trim();
+                    String sourceMapping = parts[1].trim();
+                    
+                    if (Pattern.matches("\\w+\\.\\w+", sourceMapping)) {
+                        setRuntimeConfig("sharding.mapping." + targetTable, sourceMapping);
+                        System.out.println("✓ 添加映射: " + targetTable + " -> " + sourceMapping);
+                        mappingCount++;
+                    } else {
+                        System.out.println("❌ 格式错误，正确格式: 表名.字段名");
+                    }
+                } else {
+                    System.out.println("❌ 格式错误，正确格式: 目标表名=源表名.字段名");
+                }
+            } else {
+                System.out.println("❌ 格式错误，正确格式: 目标表名=源表名.字段名");
+            }
+        }
+        
+        System.out.println("已配置 " + mappingCount + " 个分表映射");
+    }
+
+    /**
+     * 配置分表字段
+     */
+    private static void configureShardingFields(Scanner scanner) {
+        System.out.println("\n=== 配置分表字段 ===");
+        System.out.println("为需要分表的表指定分表字段");
+        System.out.println("格式：表名=字段名");
+        System.out.println("如：user_table=id");
+        System.out.println("输入空行完成配置");
+        
+        int fieldCount = 0;
+        while (true) {
+            System.out.print("分表字段 " + (fieldCount + 1) + " (表名=字段名): ");
+            String field = scanner.nextLine().trim();
+            
+            if (field.isEmpty()) {
+                break;
+            }
+            
+            if (field.contains("=")) {
+                String[] parts = field.split("=", 2);
+                if (parts.length == 2) {
+                    String tableName = parts[0].trim();
+                    String fieldName = parts[1].trim();
+                    
+                    if (!tableName.isEmpty() && !fieldName.isEmpty()) {
+                        setRuntimeConfig("sharding.field." + tableName, fieldName);
+                        System.out.println("✓ 添加分表字段: " + tableName + " -> " + fieldName);
+                        fieldCount++;
+                    } else {
+                        System.out.println("❌ 表名和字段名不能为空");
+                    }
+                } else {
+                    System.out.println("❌ 格式错误，正确格式: 表名=字段名");
+                }
+            } else {
+                System.out.println("❌ 格式错误，正确格式: 表名=字段名");
+            }
+        }
+        
+        System.out.println("已配置 " + fieldCount + " 个分表字段");
+    }
+
+    /**
      * 完整的交互式配置流程
      */
     public static void interactiveConfiguration() {
@@ -366,14 +758,21 @@ public class DynamicConfigManager {
                 configureOutputPaths();
             }
             
-            // 4. 其他配置
+            // 4. 分表配置
+            System.out.print("\n是否配置分表功能？(y/n) [n]: ");
+            String configSharding = scanner.nextLine().trim();
+            if ("y".equalsIgnoreCase(configSharding)) {
+                configureSharding();
+            }
+            
+            // 5. 其他配置
             System.out.print("\n是否配置其他选项？(y/n) [n]: ");
             String configOther = scanner.nextLine().trim();
             if ("y".equalsIgnoreCase(configOther)) {
                 configureOtherOptions();
             }
             
-            // 5. 保存配置
+            // 6. 保存配置
             System.out.print("\n是否保存配置到文件？(y/n) [y]: ");
             String saveConfig = scanner.nextLine().trim();
             if (saveConfig.isEmpty() || "y".equalsIgnoreCase(saveConfig)) {
