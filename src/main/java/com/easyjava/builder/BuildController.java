@@ -125,6 +125,19 @@ public class BuildController {
             bw.newLine();
             bw.newLine();
 
+            BuildComment.CreateFieldComment(bw, "根据参数删除");
+            bw.write("\t@RequestMapping(\"/deleteByParam\")");
+            bw.newLine();
+            bw.write("\t@GlobalInterceptor(checkParams = true)");
+            bw.newLine();
+            bw.write("\tpublic ResponseVO deleteByParam(" + tableInfo.getBeanParamName() + " param) {");
+            bw.newLine();
+            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".deleteByParam(param));");
+            bw.newLine();
+            bw.write("\t}");
+            bw.newLine();
+            bw.newLine();
+
             for (Map.Entry<String, List<FieldInfo>> entry : tableInfo.getKeyIndexMap().entrySet()) {
                 List<FieldInfo> keyFieldInfos = entry.getValue();
 

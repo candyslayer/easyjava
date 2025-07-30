@@ -36,7 +36,7 @@ public interface BaseMapper<T, P> {
     /*
      * deleteByParam:(根据参数删除记录)
      */
-    void deleteByParam(@Param("query") P p);
+    Integer deleteByParam(@Param("query") P p);
 
     /*
      * updateByParam:(根据参数更新记录)

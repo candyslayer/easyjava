@@ -184,6 +184,18 @@ public class BuildServiceImpl {
                         bw.newLine();
                         bw.newLine();
 
+                        BuildComment.CreateFieldComment(bw, "根据参数删除");
+                        bw.write("\t@Override");
+                        bw.newLine();
+                        bw.write("\tpublic Integer deleteByParam(" + tableInfo.getBeanParamName() + " param) {");
+                        bw.newLine();
+                        bw.write("\t\treturn this." + mapperBeanName + ".deleteByParam(param);");
+                        bw.newLine();
+                        bw.write("\t}");
+
+                        bw.newLine();
+                        bw.newLine();
+
                         for (Map.Entry<String, List<FieldInfo>> entry : tableInfo.getKeyIndexMap().entrySet()) {
                                 List<FieldInfo> keyFieldInfos = entry.getValue();
 
