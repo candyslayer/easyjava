@@ -196,6 +196,18 @@ public class BuildServiceImpl {
                         bw.newLine();
                         bw.newLine();
 
+                        BuildComment.CreateFieldComment(bw, "根据参数更新");
+                        bw.write("\t@Override");
+                        bw.newLine();
+                        bw.write("\tpublic Integer updateByParam(" + tableInfo.getBeanName() + " bean, " + tableInfo.getBeanParamName() + " param) {");
+                        bw.newLine();
+                        bw.write("\t\treturn this." + mapperBeanName + ".updateByParam(bean, param);");
+                        bw.newLine();
+                        bw.write("\t}");
+
+                        bw.newLine();
+                        bw.newLine();
+
                         for (Map.Entry<String, List<FieldInfo>> entry : tableInfo.getKeyIndexMap().entrySet()) {
                                 List<FieldInfo> keyFieldInfos = entry.getValue();
 

@@ -138,6 +138,19 @@ public class BuildController {
             bw.newLine();
             bw.newLine();
 
+            BuildComment.CreateFieldComment(bw, "根据参数更新");
+            bw.write("\t@RequestMapping(\"/updateByParam\")");
+            bw.newLine();
+            bw.write("\t@GlobalInterceptor(checkParams = true)");
+            bw.newLine();
+            bw.write("\tpublic ResponseVO updateByParam(" + tableInfo.getBeanName() + " bean, " + tableInfo.getBeanParamName() + " param) {");
+            bw.newLine();
+            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".updateByParam(bean, param));");
+            bw.newLine();
+            bw.write("\t}");
+            bw.newLine();
+            bw.newLine();
+
             for (Map.Entry<String, List<FieldInfo>> entry : tableInfo.getKeyIndexMap().entrySet()) {
                 List<FieldInfo> keyFieldInfos = entry.getValue();
 

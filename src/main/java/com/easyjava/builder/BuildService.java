@@ -108,6 +108,11 @@ public class BuildService {
             bw.newLine();
             bw.newLine();
 
+            BuildComment.CreateFieldComment(bw, "根据参数更新");
+            bw.write("\tInteger updateByParam(" + tableInfo.getBeanName() + " bean, " + tableInfo.getBeanParamName() + " param);");
+            bw.newLine();
+            bw.newLine();
+
             for (Map.Entry<String, List<FieldInfo>> entry : tableInfo.getKeyIndexMap().entrySet()) {
                 List<FieldInfo> keyFieldInfos = entry.getValue();
 
