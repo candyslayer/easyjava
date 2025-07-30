@@ -72,34 +72,49 @@ public class BuildService {
 
             BuildComment.CreateFieldComment(bw, "根据条件查询列表");
             bw.write(
-                    "\tList<" + tableInfo.getBeanName() + "> FindListParam(" + tableInfo.getBeanParamName()
+                    "\tList<" + tableInfo.getBeanName() + "> findListParam(" + tableInfo.getBeanParamName()
                             + " param);");
             bw.newLine();
             bw.newLine();
 
+            BuildComment.CreateFieldComment(bw, "根据条件查询单条记录");
+            bw.write("\t" + tableInfo.getBeanName() + " findOneByParam(" + tableInfo.getBeanParamName() + " param);");
+            bw.newLine();
+            bw.newLine();
+
             BuildComment.CreateFieldComment(bw, "根据条件查询数量");
-            bw.write("\tInteger FindCountByParam(" + tableInfo.getBeanParamName() + " param);");
+            bw.write("\tInteger findCountByParam(" + tableInfo.getBeanParamName() + " param);");
+            bw.newLine();
+            bw.newLine();
+
+            BuildComment.CreateFieldComment(bw, "根据条件检查数据是否存在");
+            bw.write("\tBoolean checkExists(" + tableInfo.getBeanParamName() + " param);");
             bw.newLine();
             bw.newLine();
 
             BuildComment.CreateFieldComment(bw, "分页查询");
-            bw.write("\tPaginationResultVO<" + tableInfo.getBeanName() + "> FindListByPage("
+            bw.write("\tPaginationResultVO<" + tableInfo.getBeanName() + "> findListByPage("
                     + tableInfo.getBeanParamName() + " param);");
             bw.newLine();
             bw.newLine();
 
             BuildComment.CreateFieldComment(bw, "新增");
-            bw.write("\tInteger Add(" + tableInfo.getBeanName() + " bean);");
+            bw.write("\tInteger add(" + tableInfo.getBeanName() + " bean);");
+            bw.newLine();
+            bw.newLine();
+
+            BuildComment.CreateFieldComment(bw, "新增或更新");
+            bw.write("\tInteger addOrUpdate(" + tableInfo.getBeanName() + " bean);");
             bw.newLine();
             bw.newLine();
 
             BuildComment.CreateFieldComment(bw, "批量新增");
-            bw.write("\tInteger AddBatch(List<" + tableInfo.getBeanName() + "> listbean);");
+            bw.write("\tInteger addBatch(List<" + tableInfo.getBeanName() + "> listbean);");
             bw.newLine();
             bw.newLine();
 
             BuildComment.CreateFieldComment(bw, "批量新增或修改");
-            bw.write("\tInteger AddOrUpdateBatch(List<" + tableInfo.getBeanName() + "> listbean);");
+            bw.write("\tInteger addOrUpdateBatch(List<" + tableInfo.getBeanName() + "> listbean);");
             bw.newLine();
             bw.newLine();
 

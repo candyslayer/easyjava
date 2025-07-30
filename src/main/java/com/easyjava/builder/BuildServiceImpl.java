@@ -88,7 +88,7 @@ public class BuildServiceImpl {
                         bw.write("\t@Override");
                         bw.newLine();
                         bw.write(
-                                        "\tpublic List<" + tableInfo.getBeanName() + "> FindListParam("
+                                        "\tpublic List<" + tableInfo.getBeanName() + "> findListParam("
                                                         + tableInfo.getBeanParamName()
                                                         + " param) {");
                         bw.newLine();
@@ -99,12 +99,38 @@ public class BuildServiceImpl {
                         bw.newLine();
                         bw.newLine();
 
+                        BuildComment.CreateFieldComment(bw, "根据条件查询单条记录");
+                        bw.write("\t@Override");
+                        bw.newLine();
+                        bw.write("\tpublic " + tableInfo.getBeanName() + " findOneByParam(" + tableInfo.getBeanParamName() + " param) {");
+                        bw.newLine();
+                        bw.write("\t\tList<" + tableInfo.getBeanName() + "> list = this.findListParam(param);");
+                        bw.newLine();
+                        bw.write("\t\treturn list.isEmpty() ? null : list.get(0);");
+                        bw.newLine();
+                        bw.write("\t}");
+
+                        bw.newLine();
+                        bw.newLine();
+
                         BuildComment.CreateFieldComment(bw, "根据条件查询数量");
                         bw.write("\t@Override");
                         bw.newLine();
-                        bw.write("\tpublic Integer FindCountByParam(" + tableInfo.getBeanParamName() + " param) {");
+                        bw.write("\tpublic Integer findCountByParam(" + tableInfo.getBeanParamName() + " param) {");
                         bw.newLine();
                         bw.write("\t\treturn this." + mapperBeanName + ".selectCount(param);");
+                        bw.newLine();
+                        bw.write("\t}");
+
+                        bw.newLine();
+                        bw.newLine();
+
+                        BuildComment.CreateFieldComment(bw, "根据条件检查数据是否存在");
+                        bw.write("\t@Override");
+                        bw.newLine();
+                        bw.write("\tpublic Boolean checkExists(" + tableInfo.getBeanParamName() + " param) {");
+                        bw.newLine();
+                        bw.write("\t\treturn this.findCountByParam(param) > 0;");
                         bw.newLine();
                         bw.write("\t}");
 
@@ -114,10 +140,10 @@ public class BuildServiceImpl {
                         BuildComment.CreateFieldComment(bw, "分页查询");
                         bw.write("\t@Override");
                         bw.newLine();
-                        bw.write("\tpublic PaginationResultVO<" + tableInfo.getBeanName() + "> FindListByPage("
+                        bw.write("\tpublic PaginationResultVO<" + tableInfo.getBeanName() + "> findListByPage("
                                         + tableInfo.getBeanParamName() + " param) {");
                         bw.newLine();
-                        bw.write("\t\tint count = this.FindCountByParam(param);");
+                        bw.write("\t\tint count = this.findCountByParam(param);");
                         bw.newLine();
                         bw.write(
                                         "\t\tint pageSize = param.getPageSize() == null ? PageSize.SIZE15.getSize() : param.getPageSize();");
@@ -143,9 +169,21 @@ public class BuildServiceImpl {
                         BuildComment.CreateFieldComment(bw, "新增");
                         bw.write("\t@Override");
                         bw.newLine();
-                        bw.write("\tpublic Integer Add(" + tableInfo.getBeanName() + " bean) {");
+                        bw.write("\tpublic Integer add(" + tableInfo.getBeanName() + " bean) {");
                         bw.newLine();
                         bw.write("\t\treturn this." + mapperBeanName + ".insert(bean);");
+                        bw.newLine();
+                        bw.write("\t}");
+
+                        bw.newLine();
+                        bw.newLine();
+
+                        BuildComment.CreateFieldComment(bw, "新增或更新");
+                        bw.write("\t@Override");
+                        bw.newLine();
+                        bw.write("\tpublic Integer addOrUpdate(" + tableInfo.getBeanName() + " bean) {");
+                        bw.newLine();
+                        bw.write("\t\treturn this." + mapperBeanName + ".insertOrUpdate(bean);");
                         bw.newLine();
                         bw.write("\t}");
 
@@ -155,7 +193,7 @@ public class BuildServiceImpl {
                         BuildComment.CreateFieldComment(bw, "批量新增");
                         bw.write("\t@Override");
                         bw.newLine();
-                        bw.write("\tpublic Integer AddBatch(List<" + tableInfo.getBeanName() + "> listbean) {");
+                        bw.write("\tpublic Integer addBatch(List<" + tableInfo.getBeanName() + "> listbean) {");
                         bw.newLine();
                         bw.write("\t\tif (listbean == null || listbean.isEmpty()){\r\n" + //
                                         "\t\t\treturn 0;\r\n" + //
@@ -171,7 +209,7 @@ public class BuildServiceImpl {
                         BuildComment.CreateFieldComment(bw, "批量新增或修改");
                         bw.write("\t@Override");
                         bw.newLine();
-                        bw.write("\tpublic Integer AddOrUpdateBatch(List<" + tableInfo.getBeanName() + "> listbean) {");
+                        bw.write("\tpublic Integer addOrUpdateBatch(List<" + tableInfo.getBeanName() + "> listbean) {");
                         bw.newLine();
                         bw.write("\t\tif (listbean == null || listbean.isEmpty()){\r\n" + //
                                         "\t\t\treturn 0;\r\n" + //

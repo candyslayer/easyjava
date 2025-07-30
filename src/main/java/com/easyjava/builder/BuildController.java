@@ -86,6 +86,28 @@ public class BuildController {
             bw.newLine();
             bw.newLine();
 
+            BuildComment.CreateFieldComment(bw, "根据条件检查数据是否存在");
+            bw.write("\t@RequestMapping(\"/checkExists\")");
+            bw.newLine();
+            bw.write("\tpublic ResponseVO checkExists(" + query + " query) {");
+            bw.newLine();
+            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".checkExists(query));");
+            bw.newLine();
+            bw.write("\t}");
+            bw.newLine();
+            bw.newLine();
+
+            BuildComment.CreateFieldComment(bw, "根据条件查询单条记录");
+            bw.write("\t@RequestMapping(\"/findOne\")");
+            bw.newLine();
+            bw.write("\tpublic ResponseVO findOne(" + query + " query) {");
+            bw.newLine();
+            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".findOneByParam(query));");
+            bw.newLine();
+            bw.write("\t}");
+            bw.newLine();
+            bw.newLine();
+
             BuildComment.CreateFieldComment(bw, "新增");
             bw.write("\t@RequestMapping(\"/add\")");
             bw.newLine();
@@ -94,6 +116,19 @@ public class BuildController {
             bw.write("\t\t" + serviceBeanName + ".Add(bean);");
             bw.newLine();
             bw.write("\t\treturn GetSuccessResponseVO(null);");
+            bw.newLine();
+            bw.write("\t}");
+            bw.newLine();
+            bw.newLine();
+
+            BuildComment.CreateFieldComment(bw, "新增或更新");
+            bw.write("\t@RequestMapping(\"/addOrUpdate\")");
+            bw.newLine();
+            bw.write("\t@GlobalInterceptor(checkParams = true)");
+            bw.newLine();
+            bw.write("\tpublic ResponseVO addOrUpdate(" + beanName + " bean) {");
+            bw.newLine();
+            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".AddOrUpdate(bean));");
             bw.newLine();
             bw.write("\t}");
             bw.newLine();
