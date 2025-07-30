@@ -9,13 +9,13 @@ import jakarta.servlet.http.HttpServletRequest;
 public class DuplicateKeyExceptionStrategy implements ExceptionHandlerStrategy{
 
     @Override
-    public Boolean Support(Exception e) {
+    public Boolean support(Exception e) {
         
         return e instanceof DuplicateKeyException;
     }
 
     @Override
-    public ResponseVO HandleException(Exception e, HttpServletRequest request) {
+    public ResponseVO handleException(Exception e, HttpServletRequest request) {
 
         ResponseVO ajaxResponse = new ResponseVO<>();
         ajaxResponse.setCode(ResponseCodeEnum.CODE_601.getCode());

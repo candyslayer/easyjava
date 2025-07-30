@@ -8,13 +8,13 @@ import jakarta.servlet.http.HttpServletRequest;
 public class BusinessExceptionStrategy implements ExceptionHandlerStrategy {
 
     @Override
-    public Boolean Support(Exception e) {
+    public Boolean support(Exception e) {
 
         return e instanceof BusinessException;
     }
 
     @Override
-    public ResponseVO HandleException(Exception e, HttpServletRequest request) {
+    public ResponseVO handleException(Exception e, HttpServletRequest request) {
         ResponseVO ajaxResponse = new ResponseVO<>();
 
         BusinessException biz = (BusinessException) e;

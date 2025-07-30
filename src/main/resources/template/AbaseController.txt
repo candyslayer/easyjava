@@ -2,7 +2,7 @@ public class AbaseController {
     protected static final String STATUS_SUCCESS = "success";
     protected static final String STATUS_ERROR = "error";
 
-    protected <T> ResponseVO<?> GetSuccessResponseVO(T t) {
+    protected <T> ResponseVO<?> getSuccessResponseVO(T t) {
         ResponseVO<T> responseVO = new ResponseVO<>();
         responseVO.setStatus(STATUS_SUCCESS);
         responseVO.setCode(ResponseCodeEnum.CODE_200.getCode());

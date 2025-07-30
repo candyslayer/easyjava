@@ -60,6 +60,13 @@ public class BuildController {
             bw.newLine();
             bw.write("import " + Constants.PACKAGE_PO + "." + beanName + ";");
             bw.newLine();
+            
+            // 如果启用分表，导入分表相关的工具类
+            if (tableInfo.getEnableSharding() != null && tableInfo.getEnableSharding()) {
+                bw.write("import " + Constants.PACKAGE_UTILS + ".ShardingUtils;");
+                bw.newLine();
+            }
+            
             bw.newLine();
 
             BuildComment.CreateClassComment(bw, tableInfo.getComment() + "Controller");
@@ -75,12 +82,49 @@ public class BuildController {
             bw.newLine();
             bw.newLine();
 
+            // 如果启用分表，添加分表配置
+            if (tableInfo.getEnableSharding() != null && tableInfo.getEnableSharding()) {
+                BuildComment.CreateFieldComment(bw, "分表配置");
+                bw.write("\tprivate static final String SHARDING_FIELD = \"" + tableInfo.getShardingField() + "\";");
+                bw.newLine();
+                bw.write("\tprivate static final String SHARDING_STRATEGY = \"" + tableInfo.getShardingStrategy() + "\";");
+                bw.newLine();
+                bw.newLine();
+
+                BuildComment.CreateFieldComment(bw, "获取分表表名");
+                bw.write("\tprivate String getShardingTableName(Object shardingValue) {");
+                bw.newLine();
+                bw.write("\t\treturn ShardingUtils.getTableName(\"" + tableInfo.getTableName() + "\", shardingValue, SHARDING_STRATEGY);");
+                bw.newLine();
+                bw.write("\t}");
+                bw.newLine();
+                bw.newLine();
+            }
+
             BuildComment.CreateFieldComment(bw, "根据条件分页查询");
             bw.write("\t@RequestMapping(\"/loadDataList\")");
             bw.newLine();
-            bw.write("\tpublic ResponseVO LoadDataList(" + query + " query) {");
+            bw.write("\tpublic ResponseVO loadDataList(" + query + " query) {");
             bw.newLine();
-            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".FindListByPage(query));");
+            if (tableInfo.getEnableSharding() != null && tableInfo.getEnableSharding()) {
+                bw.write("\t\t// 分表查询逻辑");
+                bw.newLine();
+                bw.write("\t\tif (query.get" + StringUtils.uperCaseFirstLetter(tableInfo.getShardingField()) + "() != null) {");
+                bw.newLine();
+                bw.write("\t\t\t// 单表查询");
+                bw.newLine();
+                bw.write("\t\t\treturn getSuccessResponseVO(" + serviceBeanName + ".findListByPage(query));");
+                bw.newLine();
+                bw.write("\t\t} else {");
+                bw.newLine();
+                bw.write("\t\t\t// 多表查询");
+                bw.newLine();
+                bw.write("\t\t\treturn getSuccessResponseVO(" + serviceBeanName + ".findListByPageWithSharding(query));");
+                bw.newLine();
+                bw.write("\t\t}");
+            } else {
+                bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".findListByPage(query));");
+            }
             bw.newLine();
             bw.write("\t}");
             bw.newLine();
@@ -91,7 +135,7 @@ public class BuildController {
             bw.newLine();
             bw.write("\tpublic ResponseVO checkExists(" + query + " query) {");
             bw.newLine();
-            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".checkExists(query));");
+            bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".checkExists(query));");
             bw.newLine();
             bw.write("\t}");
             bw.newLine();
@@ -102,7 +146,7 @@ public class BuildController {
             bw.newLine();
             bw.write("\tpublic ResponseVO findOne(" + query + " query) {");
             bw.newLine();
-            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".findOneByParam(query));");
+            bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".findOneByParam(query));");
             bw.newLine();
             bw.write("\t}");
             bw.newLine();
@@ -111,11 +155,18 @@ public class BuildController {
             BuildComment.CreateFieldComment(bw, "新增");
             bw.write("\t@RequestMapping(\"/add\")");
             bw.newLine();
-            bw.write("\tpublic ResponseVO Add(" + beanName + " bean) {");
+            bw.write("\tpublic ResponseVO add(" + beanName + " bean) {");
             bw.newLine();
-            bw.write("\t\t" + serviceBeanName + ".Add(bean);");
-            bw.newLine();
-            bw.write("\t\treturn GetSuccessResponseVO(null);");
+            if (tableInfo.getEnableSharding() != null && tableInfo.getEnableSharding()) {
+                bw.write("\t\t// 分表新增逻辑");
+                bw.newLine();
+                bw.write("\t\tString tableName = getShardingTableName(bean.get" + 
+                        StringUtils.uperCaseFirstLetter(tableInfo.getShardingField()) + "());");
+                bw.newLine();
+                bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".addWithSharding(bean, tableName));");
+            } else {
+                bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".add(bean));");
+            }
             bw.newLine();
             bw.write("\t}");
             bw.newLine();
@@ -128,7 +179,16 @@ public class BuildController {
             bw.newLine();
             bw.write("\tpublic ResponseVO addOrUpdate(" + beanName + " bean) {");
             bw.newLine();
-            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".AddOrUpdate(bean));");
+            if (tableInfo.getEnableSharding() != null && tableInfo.getEnableSharding()) {
+                bw.write("\t\t// 分表新增或更新逻辑");
+                bw.newLine();
+                bw.write("\t\tString tableName = getShardingTableName(bean.get" + 
+                        StringUtils.uperCaseFirstLetter(tableInfo.getShardingField()) + "());");
+                bw.newLine();
+                bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".addOrUpdateWithSharding(bean, tableName));");
+            } else {
+                bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".addOrUpdate(bean));");
+            }
             bw.newLine();
             bw.write("\t}");
             bw.newLine();
@@ -137,11 +197,9 @@ public class BuildController {
             BuildComment.CreateFieldComment(bw, "批量新增");
             bw.write("\t@RequestMapping(\"/addBatch\")");
             bw.newLine();
-            bw.write("\tpublic ResponseVO AddBatch(@RequestBody List<" + beanName + "> beanlist) {");
+            bw.write("\tpublic ResponseVO addBatch(@RequestBody List<" + beanName + "> beanlist) {");
             bw.newLine();
-            bw.write("\t\t" + serviceBeanName + ".AddBatch(beanlist);");
-            bw.newLine();
-            bw.write("\t\treturn GetSuccessResponseVO(null);");
+            bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".addBatch(beanlist));");
             bw.newLine();
             bw.write("\t}");
             bw.newLine();
@@ -150,11 +208,9 @@ public class BuildController {
             BuildComment.CreateFieldComment(bw, "批量新增或修改");
             bw.write("\t@RequestMapping(\"/addOrUpdateBatch\")");
             bw.newLine();
-            bw.write("\tpublic ResponseVO AddOrUpdateBatchBatch(@RequestBody List<" + beanName + "> beanlist) {");
+            bw.write("\tpublic ResponseVO addOrUpdateBatch(@RequestBody List<" + beanName + "> beanlist) {");
             bw.newLine();
-            bw.write("\t\t" + serviceBeanName + ".AddOrUpdateBatch(beanlist);");
-            bw.newLine();
-            bw.write("\t\treturn GetSuccessResponseVO(null);");
+            bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".addOrUpdateBatch(beanlist));");
             bw.newLine();
             bw.write("\t}");
             bw.newLine();
@@ -167,7 +223,28 @@ public class BuildController {
             bw.newLine();
             bw.write("\tpublic ResponseVO deleteByParam(" + tableInfo.getBeanParamName() + " param) {");
             bw.newLine();
-            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".deleteByParam(param));");
+            if (tableInfo.getEnableSharding() != null && tableInfo.getEnableSharding()) {
+                bw.write("\t\t// 分表删除逻辑");
+                bw.newLine();
+                bw.write("\t\tif (param.get" + StringUtils.uperCaseFirstLetter(tableInfo.getShardingField()) + "() != null) {");
+                bw.newLine();
+                bw.write("\t\t\t// 单表删除");
+                bw.newLine();
+                bw.write("\t\t\tString tableName = getShardingTableName(param.get" + 
+                        StringUtils.uperCaseFirstLetter(tableInfo.getShardingField()) + "());");
+                bw.newLine();
+                bw.write("\t\t\treturn getSuccessResponseVO(" + serviceBeanName + ".deleteByParamWithSharding(param, tableName));");
+                bw.newLine();
+                bw.write("\t\t} else {");
+                bw.newLine();
+                bw.write("\t\t\t// 多表删除");
+                bw.newLine();
+                bw.write("\t\t\treturn getSuccessResponseVO(" + serviceBeanName + ".deleteByParamWithAllSharding(param));");
+                bw.newLine();
+                bw.write("\t\t}");
+            } else {
+                bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".deleteByParam(param));");
+            }
             bw.newLine();
             bw.write("\t}");
             bw.newLine();

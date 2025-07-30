@@ -6,7 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 @SuppressWarnings("rawtypes")
 public interface ExceptionHandlerStrategy {
     // 判断当前策略是否支持处理传入的异常
-    Boolean Support(Exception e);
+    Boolean support(Exception e);
     // 用于处理异常并返回响应对象。
-    ResponseVO HandleException(Exception e, HttpServletRequest request);
+    ResponseVO handleException(Exception e, HttpServletRequest request);
 }

@@ -7,12 +7,12 @@ import jakarta.servlet.http.HttpServletRequest;
 public class DefaultExceptionStrategy implements ExceptionHandlerStrategy{
 
     @Override
-    public Boolean Support(Exception e) {
+    public Boolean support(Exception e) {
         return false;
     }
 
     @Override
-    public ResponseVO HandleException(Exception e, HttpServletRequest request) {
+    public ResponseVO handleException(Exception e, HttpServletRequest request) {
         ResponseVO ajaxResponse = new ResponseVO<>();
         ajaxResponse.setCode(ResponseCodeEnum.CODE_500.getCode());
         ajaxResponse.setInfo(ResponseCodeEnum.CODE_500.getMsg());

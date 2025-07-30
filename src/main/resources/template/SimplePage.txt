@@ -19,7 +19,7 @@ public class SimplePage {
         this.countTotal = countTotal;
         this.pageSize = pageSize;
 
-        Action();
+        action();
     }
 
     public SimplePage(Integer start, Integer end) {
@@ -28,7 +28,7 @@ public class SimplePage {
     }
     
 
-    public void Action() {
+    public void action() {
         if (this.pageSize <= 0) {
             this.pageSize = PageSize.SIZE20.getSize();
         }

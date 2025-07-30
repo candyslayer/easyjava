@@ -12,7 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 public class BindOrMethodArgumentTypeMismatchExceptionStrategy implements ExceptionHandlerStrategy{
 
     @Override
-    public Boolean Support(Exception e) {
+    public Boolean support(Exception e) {
         if (e instanceof BindException || e instanceof MethodArgumentTypeMismatchException) {
             return true;
         }
@@ -21,7 +21,7 @@ public class BindOrMethodArgumentTypeMismatchExceptionStrategy implements Except
     }
 
     @Override
-    public ResponseVO HandleException(Exception e, HttpServletRequest request) {
+    public ResponseVO handleException(Exception e, HttpServletRequest request) {
         ResponseVO ajaxResponse = new ResponseVO<>();
         ajaxResponse.setCode(ResponseCodeEnum.CODE_600.getCode());
         ajaxResponse.setInfo(ResponseCodeEnum.CODE_600.getMsg());

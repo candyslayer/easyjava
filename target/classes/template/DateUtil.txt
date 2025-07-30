@@ -8,7 +8,7 @@ public class DateUtil {
 
     private static Map<String, ThreadLocal<SimpleDateFormat>> sdfMap = new HashMap<>();
 
-    public static SimpleDateFormat GetSDF(final String pattern) {
+    public static SimpleDateFormat getSDF(final String pattern) {
         ThreadLocal<SimpleDateFormat> tl = sdfMap.get(pattern);
 
         if (tl == null) {
@@ -30,13 +30,13 @@ public class DateUtil {
         return tl.get();
     }
 
-    public static String Formate(Date date, String pattern) {
-        return GetSDF(pattern).format(date);
+    public static String format(Date date, String pattern) {
+        return getSDF(pattern).format(date);
     }
 
-    public static Date Parse(String dateStr, String pattern) {
+    public static Date parse(String dateStr, String pattern) {
         try {
-            return GetSDF(pattern).parse(dateStr);
+            return getSDF(pattern).parse(dateStr);
         } catch (Exception e) {
             e.printStackTrace();
         }

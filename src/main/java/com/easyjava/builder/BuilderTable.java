@@ -19,6 +19,7 @@ import com.easyjava.bean.TableInfo;
 import com.easyjava.utils.JsonUtils;
 import com.easyjava.utils.PropertiesUtils;
 import com.easyjava.utils.StringUtils;
+import com.easyjava.utils.ShardingConfigUtils;
 
 public class BuilderTable {
 
@@ -82,6 +83,9 @@ public class BuilderTable {
                 tableInfo.setFieldList(ReadFieldInfo(tableInfo));
 
                 GetKeyIndexInfo(tableInfo);
+
+                // 初始化分表配置
+                initShardingConfig(tableInfo);
 
                 tableInfos.add(tableInfo);
             }
@@ -327,6 +331,171 @@ public class BuilderTable {
         else {
             throw new RuntimeException("can not identify type : " + type);
         }
+    }
+
+    /**
+     * 初始化分表配置
+     * @param tableInfo 表信息
+     */
+    private static void initShardingConfig(TableInfo tableInfo) {
+        String tableName = tableInfo.getTableName();
+        
+        // 检查配置文件中是否配置了该表的分表信息
+        if (ShardingConfigUtils.isShardingTable(tableName)) {
+            String shardingField = ShardingConfigUtils.getShardingField(tableName);
+            String shardingStrategy = ShardingConfigUtils.getShardingStrategy(tableName);
+            
+            // 验证分表字段是否存在于表中
+            if (isFieldExist(tableInfo, shardingField)) {
+                tableInfo.setEnableSharding(true);
+                tableInfo.setShardingField(shardingField);
+                tableInfo.setShardingStrategy(shardingStrategy);
+                
+                log.info("表 {} 启用分表配置: 分表字段={}, 分表策略={}", 
+                        tableName, shardingField, shardingStrategy);
+            } else {
+                log.warn("表 {} 配置的分表字段 {} 不存在，禁用分表", tableName, shardingField);
+                tableInfo.setEnableSharding(false);
+            }
+        } else {
+            // 自动检测是否需要分表
+            autoDetectSharding(tableInfo);
+        }
+    }
+    
+    /**
+     * 检查字段是否存在于表中
+     * @param tableInfo 表信息
+     * @param fieldName 字段名（属性名）
+     * @return 是否存在
+     */
+    private static boolean isFieldExist(TableInfo tableInfo, String fieldName) {
+        if (fieldName == null) return false;
+        
+        for (FieldInfo field : tableInfo.getFieldList()) {
+            if (fieldName.equals(field.getPropertyName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 自动检测是否需要分表
+     * @param tableInfo 表信息
+     */
+    private static void autoDetectSharding(TableInfo tableInfo) {
+        String tableName = tableInfo.getTableName().toLowerCase();
+        
+        // 默认不启用分表
+        tableInfo.setEnableSharding(false);
+        
+        // 示例：如果表名包含特定关键字，启用分表
+        if (tableName.contains("log") || tableName.contains("order") || 
+            tableName.contains("record") || tableName.contains("history")) {
+            
+            // 查找合适的分表字段
+            String shardingField = findShardingField(tableInfo);
+            if (shardingField != null) {
+                tableInfo.setEnableSharding(true);
+                tableInfo.setShardingField(shardingField);
+                
+                // 根据分表字段类型确定分表策略
+                String strategy = determineShardingStrategy(tableInfo, shardingField);
+                tableInfo.setShardingStrategy(strategy);
+                
+                log.info("自动检测表 {} 启用分表配置: 分表字段={}, 分表策略={}", 
+                        tableName, shardingField, strategy);
+            }
+        }
+    }
+
+    /**
+     * 查找合适的分表字段
+     * @param tableInfo 表信息
+     * @return 分表字段名
+     */
+    private static String findShardingField(TableInfo tableInfo) {
+        // 优先查找时间类型字段
+        for (FieldInfo field : tableInfo.getFieldList()) {
+            String fieldName = field.getFieldName().toLowerCase();
+            String sqlType = field.getSqlType();
+            
+            // 时间字段优先作为分表字段
+            if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, sqlType) || 
+                ArrayUtils.contains(Constants.SQL_DATE_TYPE, sqlType)) {
+                if (fieldName.contains("create") || fieldName.contains("time") || 
+                    fieldName.contains("date")) {
+                    return field.getPropertyName();
+                }
+            }
+        }
+        
+        // 如果没有时间字段，查找ID类型字段
+        for (FieldInfo field : tableInfo.getFieldList()) {
+            String fieldName = field.getFieldName().toLowerCase();
+            String sqlType = field.getSqlType();
+            
+            if (ArrayUtils.contains(Constants.SQL_INTEGER_TYPE, sqlType) || 
+                ArrayUtils.contains(Constants.SQL_LONG_TYPE, sqlType)) {
+                if (fieldName.contains("id") && !fieldName.equals("id")) {
+                    return field.getPropertyName();
+                }
+            }
+        }
+        
+        // 最后考虑主键ID
+        for (FieldInfo field : tableInfo.getFieldList()) {
+            if (field.getIsAutoIncrement() != null && field.getIsAutoIncrement()) {
+                return field.getPropertyName();
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * 确定分表策略
+     * @param tableInfo 表信息
+     * @param shardingField 分表字段
+     * @return 分表策略
+     */
+    private static String determineShardingStrategy(TableInfo tableInfo, String shardingField) {
+        // 根据分表字段找到对应的FieldInfo
+        for (FieldInfo field : tableInfo.getFieldList()) {
+            if (field.getPropertyName().equals(shardingField)) {
+                String sqlType = field.getSqlType();
+                
+                // 时间类型使用时间分表
+                if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, sqlType) || 
+                    ArrayUtils.contains(Constants.SQL_DATE_TYPE, sqlType)) {
+                    return "time";
+                }
+                
+                // 整数类型根据字段名判断
+                if (ArrayUtils.contains(Constants.SQL_INTEGER_TYPE, sqlType) || 
+                    ArrayUtils.contains(Constants.SQL_LONG_TYPE, sqlType)) {
+                    String fieldName = field.getFieldName().toLowerCase();
+                    if (fieldName.contains("id")) {
+                        // ID字段使用哈希分表
+                        return "hash";
+                    } else {
+                        // 其他数值字段使用范围分表
+                        return "range";
+                    }
+                }
+                
+                // 字符串类型使用哈希分表
+                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, sqlType)) {
+                    return "hash";
+                }
+                
+                break;
+            }
+        }
+        
+        // 默认使用哈希分表
+        return "hash";
     }
 
 }

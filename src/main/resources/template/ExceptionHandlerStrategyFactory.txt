@@ -14,7 +14,7 @@ public class ExceptionHandlerStrategyFactory {
     }
 
     public ExceptionHandlerStrategy getStrategy(Exception e) {
-        return strategies.stream().filter(strategy -> strategy.Support(e)).findFirst()
+        return strategies.stream().filter(strategy -> strategy.support(e)).findFirst()
                 .orElse(new DefaultExceptionStrategy());
     }
 }

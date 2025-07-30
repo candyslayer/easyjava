@@ -27,6 +27,11 @@ public class TableInfo {
     // 是否有bigdecimal类型
     private Boolean haveBigDecimal;
 
+    // 分表配置
+    private Boolean enableSharding = false;
+    private String shardingField;
+    private String shardingStrategy; // 分表策略：hash, range, time等
+
     /**
      * @return the tableName
      */
@@ -167,12 +172,55 @@ public class TableInfo {
         this.haveBigDecimal = haveBigDecimal;
     }
 
+    /**
+     * @return the enableSharding
+     */
+    public Boolean getEnableSharding() {
+        return enableSharding;
+    }
+
+    /**
+     * @param enableSharding the enableSharding to set
+     */
+    public void setEnableSharding(Boolean enableSharding) {
+        this.enableSharding = enableSharding;
+    }
+
+    /**
+     * @return the shardingField
+     */
+    public String getShardingField() {
+        return shardingField;
+    }
+
+    /**
+     * @param shardingField the shardingField to set
+     */
+    public void setShardingField(String shardingField) {
+        this.shardingField = shardingField;
+    }
+
+    /**
+     * @return the shardingStrategy
+     */
+    public String getShardingStrategy() {
+        return shardingStrategy;
+    }
+
+    /**
+     * @param shardingStrategy the shardingStrategy to set
+     */
+    public void setShardingStrategy(String shardingStrategy) {
+        this.shardingStrategy = shardingStrategy;
+    }
+
     @Override
     public String toString() {
         return "TableInfo [tableName=" + tableName + ", beanName=" + beanName + ", beanParamName=" + beanParamName
                 + ", comment=" + comment + ", fieldList=" + fieldList + ", fieldListExtend=" + fieldListExtend
                 + ", keyIndexMap=" + keyIndexMap + ", haveDate=" + haveDate + ", haveDateTime=" + haveDateTime
-                + ", haveBigDecimal=" + haveBigDecimal + "]";
+                + ", haveBigDecimal=" + haveBigDecimal + ", enableSharding=" + enableSharding + ", shardingField=" + shardingField
+                + ", shardingStrategy=" + shardingStrategy + "]";
     }
 
 }
