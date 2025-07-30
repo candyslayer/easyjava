@@ -56,6 +56,20 @@ public class AppEnhanced {
             return;
         }
         
+        // 检查是否启动自动分表
+        if (args.length > 0 && "auto-sharding".equalsIgnoreCase(args[0])) {
+            System.out.println("启动自动分表功能...");
+            com.easyjava.sharding.ShardingExecutor.main(new String[]{"execute"});
+            return;
+        }
+        
+        // 检查是否检查分表配置
+        if (args.length > 0 && "check-sharding".equalsIgnoreCase(args[0])) {
+            System.out.println("检查分表配置...");
+            com.easyjava.sharding.ShardingExecutor.main(new String[]{"validate"});
+            return;
+        }
+        
         // 检查是否从文件加载配置
         if (args.length > 1 && "--config".equalsIgnoreCase(args[0])) {
             DynamicConfigManager.loadConfigurationFromFile(args[1]);
@@ -283,7 +297,9 @@ public class AppEnhanced {
         System.out.println("功能模式:");
         System.out.println("  config          启动交互式配置");
         System.out.println("  template        启动模板管理工具");
-        System.out.println("  sharding        启动分表配置管理器");
+        System.out.println("  sharding        启动分表交互式配置管理器");
+        System.out.println("  auto-sharding   直接读取配置执行分表 (无交互)");
+        System.out.println("  check-sharding  检查分表配置 (无交互)");
         System.out.println("  --show-config   显示当前配置信息");
         System.out.println("");
         System.out.println("生成选项:");
@@ -300,12 +316,16 @@ public class AppEnhanced {
         System.out.println("示例:");
         System.out.println("  java -jar easyjava.jar config");
         System.out.println("  java -jar easyjava.jar sharding");
+        System.out.println("  java -jar easyjava.jar auto-sharding");
         System.out.println("  java -jar easyjava.jar --full --incremental");
         System.out.println("  java -jar easyjava.jar --basic --overwrite");
         System.out.println("");
         System.out.println("分表功能:");
+        System.out.println("  sharding        - 交互式分表配置 (可配置各种参数)");
+        System.out.println("  auto-sharding   - 直接执行分表 (读取配置文件，无交互)");
+        System.out.println("  check-sharding  - 验证分表配置 (无交互)");
         System.out.println("  支持多种分表策略：hash、mod、range、time");
         System.out.println("  支持跨表字段分表和自动创建分表");
-        System.out.println("  详细文档请参考：docs/分表功能文档.md");
+        System.out.println("  详细文档请参考：docs/分表功能说明文档.md");
     }
 }
