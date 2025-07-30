@@ -20,12 +20,12 @@ public class TableInfo {
     // 唯一索引合集
     private Map<String, List<FieldInfo>> keyIndexMap = new LinkedHashMap<>();
     // 是否有date类型
-    private Boolean haveDate;
+    private Boolean haveDate = false;
     // 是否有时间类型
-    private Boolean haveDateTime;
+    private Boolean haveDateTime = false;
 
     // 是否有bigdecimal类型
-    private Boolean haveBigDecimal;
+    private Boolean haveBigDecimal = false;
 
     // 分表配置
     private Boolean enableSharding = false;

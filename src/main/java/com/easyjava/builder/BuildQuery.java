@@ -60,7 +60,10 @@ public class BuildQuery {
 
                 String propName = fieldInfo.getPropertyName();
 
-                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType())) {
+                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_JSON_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_ENUM_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_SET_TYPE, fieldInfo.getSqlType())) {
                     propName = propName + Constants.SUFFIX_BEAN_PARAM_FUZZY;
 
                     bw.write("\tprivate " + fieldInfo.getJavaType() + " " + propName + ";");
@@ -119,7 +122,10 @@ public class BuildQuery {
                 bw.newLine();
 
                 // 有fuzzy后缀的
-                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType())) {
+                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_JSON_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_ENUM_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_SET_TYPE, fieldInfo.getSqlType())) {
                     propName = propName + Constants.SUFFIX_BEAN_PARAM_FUZZY;
 
                     // 截断is前缀的set

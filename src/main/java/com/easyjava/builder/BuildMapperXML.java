@@ -150,7 +150,10 @@ public class BuildMapperXML {
 
             for (FieldInfo fieldInfo : tableInfo.getFieldList()) {
                 String stringQuery = "";
-                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType())) {
+                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_JSON_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_ENUM_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_SET_TYPE, fieldInfo.getSqlType())) {
                     stringQuery = " and query." + fieldInfo.getPropertyName() + "!=''";
                 }
 
@@ -178,7 +181,10 @@ public class BuildMapperXML {
 
             for (FieldInfo fieldInfo : tableInfo.getFieldListExtend()) {
                 String andWhere = "";
-                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType())) {
+                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_JSON_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_ENUM_TYPE, fieldInfo.getSqlType()) ||
+                    ArrayUtils.contains(Constants.SQL_SET_TYPE, fieldInfo.getSqlType())) {
                     andWhere = "and " + tableAlias + "." + fieldInfo.getFieldName() + " like concat('%',#{ query."
                             + fieldInfo.getPropertyName()
                             + " },'%')";

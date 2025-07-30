@@ -80,8 +80,11 @@ public class BuilderTable {
                 // 初始化haveDate和haveDateTime属性
                 tableInfo.setHaveDate(false);
                 tableInfo.setHaveDateTime(false);
+                tableInfo.setHaveBigDecimal(false);
 
-                tableInfo.setFieldList(ReadFieldInfo(tableInfo));
+                // 读取字段信息
+                List<FieldInfo> fieldList = ReadFieldInfo(tableInfo);
+                tableInfo.setFieldList(fieldList);
 
                 GetKeyIndexInfo(tableInfo);
 
@@ -164,7 +167,7 @@ public class BuilderTable {
                     tableInfo.setHaveDateTime(true);
                 }
 
-                if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)) {
+                if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type) || ArrayUtils.contains(Constants.SQL_TIME_TYPE, type)) {
                     tableInfo.setHaveDate(true);
                 }
 
@@ -173,7 +176,10 @@ public class BuilderTable {
                 }
 
                 // 后面添加的扩展表字段判断
-                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, type)) {
+                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, type) || 
+                    ArrayUtils.contains(Constants.SQL_JSON_TYPE, type) ||
+                    ArrayUtils.contains(Constants.SQL_ENUM_TYPE, type) ||
+                    ArrayUtils.contains(Constants.SQL_SET_TYPE, type)) {
                     fieldExtendList.add(new FieldInfo(field, propertyName + Constants.SUFFIX_BEAN_PARAM_FUZZY,
                             type, ProcessJavaType(type), comment,
                             "auto_increment".equalsIgnoreCase(extra) ? true : false));
@@ -196,6 +202,18 @@ public class BuilderTable {
                             "String", comment,
                             "auto_increment".equalsIgnoreCase(extra) ? true : false));
                 }
+                
+                // BLOB类型、二进制类型和几何类型不添加扩展字段（因为不适合模糊查询）
+                else if (ArrayUtils.contains(Constants.SQL_BLOB_TYPE, type) ||
+                         ArrayUtils.contains(Constants.SQL_GEOMETRY_TYPE, type)) {
+                    // 这些类型字段不需要扩展查询功能，跳过
+                    log.debug("二进制/几何类型字段 {} 跳过扩展字段生成", field);
+                }
+                
+                // 布尔类型可以进行精确查询，不需要扩展字段
+                else if (ArrayUtils.contains(Constants.SQL_BOOLEAN_TYPE, type)) {
+                    log.debug("布尔类型字段 {} 跳过扩展字段生成", field);
+                }
 
                 fieldInfos.add(fieldInfo);
             }
@@ -203,6 +221,10 @@ public class BuilderTable {
             tableInfo.setFieldListExtend(fieldExtendList);
         } catch (Exception e) {
             log.error("获取表异常", e);
+            // 即使发生异常，也要确保扩展字段列表不为null
+            if (tableInfo.getFieldListExtend() == null) {
+                tableInfo.setFieldListExtend(new ArrayList<>());
+            }
         } finally {
             if (fieldResult != null) {
                 try {
@@ -321,15 +343,28 @@ public class BuilderTable {
         if (ArrayUtils.contains(Constants.SQL_INTEGER_TYPE, type)) {
             return "Integer";
         } else if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)
-                || ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES,
-                        type)) {
+                || ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, type)) {
             return "Date";
+        } else if (ArrayUtils.contains(Constants.SQL_TIME_TYPE, type)) {
+            return "String";  // Time 类型使用 String 更方便处理
         } else if (ArrayUtils.contains(Constants.SQL_DECIMAL_TYPE, type)) {
             return "BigDecimal";
         } else if (ArrayUtils.contains(Constants.SQL_LONG_TYPE, type)) {
             return "Long";
         } else if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, type)) {
             return "String";
+        } else if (ArrayUtils.contains(Constants.SQL_BLOB_TYPE, type)) {
+            return "byte[]";
+        } else if (ArrayUtils.contains(Constants.SQL_BOOLEAN_TYPE, type)) {
+            return "Boolean";
+        } else if (ArrayUtils.contains(Constants.SQL_JSON_TYPE, type)) {
+            return "String";  // JSON 通常作为 String 处理
+        } else if (ArrayUtils.contains(Constants.SQL_ENUM_TYPE, type)) {
+            return "String";  // ENUM 作为 String 处理
+        } else if (ArrayUtils.contains(Constants.SQL_SET_TYPE, type)) {
+            return "String";  // SET 作为 String 处理
+        } else if (ArrayUtils.contains(Constants.SQL_GEOMETRY_TYPE, type)) {
+            return "String";  // 几何类型作为 String 处理，也可以考虑使用专门的几何类型
         }
 
         else {
@@ -368,8 +403,15 @@ public class BuilderTable {
                 tableInfo.setEnableSharding(false);
             }
         } else {
-            // 自动检测是否需要分表
-            autoDetectSharding(tableInfo);
+            // 根据配置决定是否进行自动检测
+            if (ShardingConfigUtils.isAutoDetectEnabled()) {
+                // 自动检测是否需要分表
+                autoDetectSharding(tableInfo);
+            } else {
+                // 如果表不在配置的分表列表中，则不启用分表
+                tableInfo.setEnableSharding(false);
+                log.debug("表 {} 未在分表配置列表中，且未启用自动检测，禁用分表", tableName);
+            }
         }
     }
     
@@ -439,7 +481,8 @@ public class BuilderTable {
             
             // 时间字段优先作为分表字段
             if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, sqlType) || 
-                ArrayUtils.contains(Constants.SQL_DATE_TYPE, sqlType)) {
+                ArrayUtils.contains(Constants.SQL_DATE_TYPE, sqlType) ||
+                ArrayUtils.contains(Constants.SQL_TIME_TYPE, sqlType)) {
                 if (fieldName.contains("create") || fieldName.contains("time") || 
                     fieldName.contains("date")) {
                     return field.getPropertyName();
@@ -484,7 +527,8 @@ public class BuilderTable {
                 
                 // 时间类型使用时间分表
                 if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, sqlType) || 
-                    ArrayUtils.contains(Constants.SQL_DATE_TYPE, sqlType)) {
+                    ArrayUtils.contains(Constants.SQL_DATE_TYPE, sqlType) ||
+                    ArrayUtils.contains(Constants.SQL_TIME_TYPE, sqlType)) {
                     return "time";
                 }
                 
@@ -501,8 +545,11 @@ public class BuilderTable {
                     }
                 }
                 
-                // 字符串类型使用哈希分表
-                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, sqlType)) {
+                // 字符串类型、JSON、枚举、集合类型使用哈希分表
+                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, sqlType) ||
+                    ArrayUtils.contains(Constants.SQL_JSON_TYPE, sqlType) ||
+                    ArrayUtils.contains(Constants.SQL_ENUM_TYPE, sqlType) ||
+                    ArrayUtils.contains(Constants.SQL_SET_TYPE, sqlType)) {
                     return "hash";
                 }
                 

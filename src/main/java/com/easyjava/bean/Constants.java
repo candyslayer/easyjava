@@ -123,14 +123,28 @@ public class Constants {
     public final static String[] SQL_DATE_TIME_TYPES = new String[] { "datetime", "timestamp" };
 
     public final static String[] SQL_DATE_TYPE = new String[] { "date" };
+    
+    public final static String[] SQL_TIME_TYPE = new String[] { "time" };
 
-    public final static String[] SQL_DECIMAL_TYPE = new String[] { "decimal", "double", "float" };
+    public final static String[] SQL_DECIMAL_TYPE = new String[] { "decimal", "double", "float", "numeric" };
 
-    public final static String[] SQL_INTEGER_TYPE = new String[] { "int", "tinyint", "int unsigned" };
+    public final static String[] SQL_INTEGER_TYPE = new String[] { "int", "tinyint", "smallint", "mediumint", "int unsigned", "tinyint unsigned", "smallint unsigned", "mediumint unsigned" };
 
-    public final static String[] SQL_LONG_TYPE = new String[] { "bigint" };
+    public final static String[] SQL_LONG_TYPE = new String[] { "bigint", "bigint unsigned" };
 
-    public final static String[] SQL_STRING_TYPE = new String[] { "varchar", "char", "text", "mediutext", "longtext" };
+    public final static String[] SQL_STRING_TYPE = new String[] { "varchar", "char", "text", "mediumtext", "longtext", "tinytext" };
+
+    public final static String[] SQL_BLOB_TYPE = new String[] { "blob", "mediumblob", "longblob", "tinyblob", "binary", "varbinary" };
+    
+    public final static String[] SQL_BOOLEAN_TYPE = new String[] { "boolean", "bool", "bit" };
+    
+    public final static String[] SQL_JSON_TYPE = new String[] { "json" };
+    
+    public final static String[] SQL_ENUM_TYPE = new String[] { "enum" };
+    
+    public final static String[] SQL_SET_TYPE = new String[] { "set" };
+    
+    public final static String[] SQL_GEOMETRY_TYPE = new String[] { "geometry", "point", "linestring", "polygon", "multipoint", "multilinestring", "multipolygon", "geometrycollection" };
 
     public static void main(String[] args) {
 

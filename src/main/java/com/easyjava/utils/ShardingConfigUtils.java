@@ -66,6 +66,15 @@ public class ShardingConfigUtils {
     }
     
     /**
+     * 检查是否启用自动检测分表
+     * @return 是否自动检测分表
+     */
+    public static boolean isAutoDetectEnabled() {
+        String autoDetect = shardingProps.getProperty("sharding.auto.detect", "false");
+        return "true".equalsIgnoreCase(autoDetect);
+    }
+    
+    /**
      * 获取需要分表的表名集合
      * @return 表名集合
      */
