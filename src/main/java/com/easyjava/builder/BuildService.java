@@ -103,6 +103,16 @@ public class BuildService {
             bw.newLine();
             bw.newLine();
 
+            BuildComment.CreateFieldComment(bw, "根据参数更新记录");
+            bw.write("\tInteger UpdateByParam(" + tableInfo.getBeanName() + " bean, " + tableInfo.getBeanParamName() + " param);");
+            bw.newLine();
+            bw.newLine();
+
+            BuildComment.CreateFieldComment(bw, "根据参数删除记录");
+            bw.write("\tInteger DeleteByParam(" + tableInfo.getBeanParamName() + " param);");
+            bw.newLine();
+            bw.newLine();
+
             for (Map.Entry<String, List<FieldInfo>> entry : tableInfo.getKeyIndexMap().entrySet()) {
                 List<FieldInfo> keyFieldInfos = entry.getValue();
 

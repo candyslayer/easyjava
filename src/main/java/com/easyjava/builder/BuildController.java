@@ -125,6 +125,28 @@ public class BuildController {
             bw.newLine();
             bw.newLine();
 
+            BuildComment.CreateFieldComment(bw, "根据参数更新记录");
+            bw.write("\t@RequestMapping(\"/updateByParam\")");
+            bw.newLine();
+            bw.write("\tpublic ResponseVO UpdateByParam(@RequestBody " + beanName + " bean, " + tableInfo.getBeanParamName() + " param) {");
+            bw.newLine();
+            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".UpdateByParam(bean, param));");
+            bw.newLine();
+            bw.write("\t}");
+            bw.newLine();
+            bw.newLine();
+
+            BuildComment.CreateFieldComment(bw, "根据参数删除记录");
+            bw.write("\t@RequestMapping(\"/deleteByParam\")");
+            bw.newLine();
+            bw.write("\tpublic ResponseVO DeleteByParam(" + tableInfo.getBeanParamName() + " param) {");
+            bw.newLine();
+            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".DeleteByParam(param));");
+            bw.newLine();
+            bw.write("\t}");
+            bw.newLine();
+            bw.newLine();
+
             for (Map.Entry<String, List<FieldInfo>> entry : tableInfo.getKeyIndexMap().entrySet()) {
                 List<FieldInfo> keyFieldInfos = entry.getValue();
 
