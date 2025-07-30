@@ -48,10 +48,24 @@ public class ShardingConfigUtils {
     }
     
     /**
+     * 检查是否启用分表功能
+     * @return 是否启用分表
+     */
+    public static boolean isShardingEnabled() {
+        String enabled = shardingProps.getProperty("sharding.enabled", "false");
+        return "true".equalsIgnoreCase(enabled);
+    }
+    
+    /**
      * 获取需要分表的表名集合
      * @return 表名集合
      */
     public static Set<String> getShardingTables() {
+        // 如果分表功能未启用，返回空集合
+        if (!isShardingEnabled()) {
+            return new HashSet<>();
+        }
+        
         String tables = shardingProps.getProperty("sharding.tables", "");
         Set<String> tableSet = new HashSet<>();
         if (!tables.isEmpty()) {
@@ -87,6 +101,10 @@ public class ShardingConfigUtils {
      * @return 是否需要分表
      */
     public static boolean isShardingTable(String tableName) {
+        // 如果分表功能未启用，直接返回false
+        if (!isShardingEnabled()) {
+            return false;
+        }
         return getShardingTables().contains(tableName);
     }
 }

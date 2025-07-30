@@ -338,6 +338,12 @@ public class BuilderTable {
      * @param tableInfo 表信息
      */
     private static void initShardingConfig(TableInfo tableInfo) {
+        // 检查分表功能是否启用
+        if (!ShardingConfigUtils.isShardingEnabled()) {
+            tableInfo.setEnableSharding(false);
+            return;
+        }
+        
         String tableName = tableInfo.getTableName();
         
         // 检查配置文件中是否配置了该表的分表信息
@@ -385,9 +391,15 @@ public class BuilderTable {
      * @param tableInfo 表信息
      */
     private static void autoDetectSharding(TableInfo tableInfo) {
+        // 如果分表功能未启用，直接返回
+        if (!ShardingConfigUtils.isShardingEnabled()) {
+            tableInfo.setEnableSharding(false);
+            return;
+        }
+        
         String tableName = tableInfo.getTableName().toLowerCase();
         
-        // 默认不启用分表
+        // 默认not启用分表
         tableInfo.setEnableSharding(false);
         
         // 示例：如果表名包含特定关键字，启用分表
