@@ -57,6 +57,15 @@ public class ShardingConfigUtils {
     }
     
     /**
+     * 检查是否启用自动创建分表
+     * @return 是否自动创建分表
+     */
+    public static boolean isAutoCreateEnabled() {
+        String autoCreate = shardingProps.getProperty("sharding.auto.create", "true");
+        return "true".equalsIgnoreCase(autoCreate);
+    }
+    
+    /**
      * 获取需要分表的表名集合
      * @return 表名集合
      */

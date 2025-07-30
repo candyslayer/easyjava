@@ -20,6 +20,7 @@ import com.easyjava.utils.JsonUtils;
 import com.easyjava.utils.PropertiesUtils;
 import com.easyjava.utils.StringUtils;
 import com.easyjava.utils.ShardingConfigUtils;
+import com.easyjava.utils.ShardingTableCreator;
 
 public class BuilderTable {
 
@@ -89,6 +90,9 @@ public class BuilderTable {
 
                 tableInfos.add(tableInfo);
             }
+
+            // 批量创建启用分表的表
+            createShardingTablesIfNeeded(tableInfos);
 
             log.info(JsonUtils.convertObject2Json(tableInfos));
         } catch (Exception e) {
@@ -508,6 +512,54 @@ public class BuilderTable {
         
         // 默认使用哈希分表
         return "hash";
+    }
+    
+    /**
+     * 为启用分表的表自动创建分表
+     * @param tableInfos 表信息列表
+     */
+    private static void createShardingTablesIfNeeded(List<TableInfo> tableInfos) {
+        if (!ShardingConfigUtils.isShardingEnabled()) {
+            log.info("分表功能未启用，跳过自动创建分表");
+            return;
+        }
+        
+        if (!ShardingConfigUtils.isAutoCreateEnabled()) {
+            log.info("自动创建分表功能未启用，跳过自动创建分表");
+            return;
+        }
+        
+        // 检查是否有启用分表的表
+        boolean hasShardingTable = false;
+        for (TableInfo tableInfo : tableInfos) {
+            if (tableInfo.getEnableSharding()) {
+                hasShardingTable = true;
+                break;
+            }
+        }
+        
+        if (!hasShardingTable) {
+            log.info("没有启用分表的表，跳过自动创建分表");
+            return;
+        }
+        
+        log.info("开始自动创建分表...");
+        
+        // 使用 ShardingTableCreator 批量创建分表
+        try {
+            ShardingTableCreator.createAllShardingTables(tableInfos);
+            
+            // 为时间分表额外创建未来3个月的表
+            for (TableInfo tableInfo : tableInfos) {
+                if (tableInfo.getEnableSharding() && "time".equals(tableInfo.getShardingStrategy())) {
+                    ShardingTableCreator.createFutureTimeTables(tableInfo, 3);
+                }
+            }
+            
+            log.info("自动创建分表完成");
+        } catch (Exception e) {
+            log.error("自动创建分表过程中出现异常", e);
+        }
     }
 
 }

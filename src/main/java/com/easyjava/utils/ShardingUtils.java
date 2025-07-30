@@ -133,4 +133,38 @@ public class ShardingUtils {
         
         return tableNames;
     }
+    
+    /**
+     * 自动创建分表（如果不存在）
+     * @param baseTableName 基础表名
+     * @param strategy 分表策略
+     */
+    public static void autoCreateShardingTables(String baseTableName, String strategy) {
+        // 创建一个临时的TableInfo对象来调用创建方法
+        com.easyjava.bean.TableInfo tableInfo = new com.easyjava.bean.TableInfo();
+        tableInfo.setTableName(baseTableName);
+        tableInfo.setEnableSharding(true);
+        tableInfo.setShardingStrategy(strategy);
+        
+        ShardingTableCreator.createShardingTables(tableInfo);
+    }
+    
+    /**
+     * 检查并创建分表（在获取表名时自动触发）
+     * @param baseTableName 基础表名
+     * @param shardingValue 分表字段值
+     * @param strategy 分表策略
+     * @param autoCreate 是否自动创建不存在的分表
+     * @return 分表后的表名
+     */
+    public static String getTableName(String baseTableName, Object shardingValue, String strategy, boolean autoCreate) {
+        String tableName = getTableName(baseTableName, shardingValue, strategy);
+        
+        if (autoCreate && !tableName.equals(baseTableName)) {
+            // 只有当确实需要分表时才自动创建
+            autoCreateShardingTables(baseTableName, strategy);
+        }
+        
+        return tableName;
+    }
 }
