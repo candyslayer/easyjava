@@ -19,6 +19,7 @@ import com.easyjava.bean.TableInfo;
 import com.easyjava.utils.JsonUtils;
 import com.easyjava.utils.PropertiesUtils;
 import com.easyjava.utils.StringUtils;
+import com.easyjava.utils.SqlTypeMapper;
 
 public class BuilderTable {
 
@@ -152,27 +153,29 @@ public class BuilderTable {
                 fieldInfo.setIsAutoIncrement("auto_increment".equalsIgnoreCase(extra) ? true : false);
                 fieldInfo.setJavaType(ProcessJavaType(type));
 
-                if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, type)) {
-                    tableInfo.setHaveDateTime(true);
+                // 使用新的类型检查方法
+                if (SqlTypeMapper.isDateTimeType(type)) {
+                    if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, type)) {
+                        tableInfo.setHaveDateTime(true);
+                    }
+                    if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)) {
+                        tableInfo.setHaveDate(true);
+                    }
                 }
 
-                if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)) {
-                    tableInfo.setHaveDate(true);
-                }
-
-                if (ArrayUtils.contains(Constants.SQL_DECIMAL_TYPE, type)) {
+                if (SqlTypeMapper.isNumericType(type) && 
+                    ArrayUtils.contains(Constants.SQL_DECIMAL_TYPE, type)) {
                     tableInfo.setHaveBigDecimal(true);
                 }
 
                 // 后面添加的扩展表字段判断
-                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, type)) {
+                if (SqlTypeMapper.isStringType(type)) {
                     fieldExtendList.add(new FieldInfo(field, propertyName + Constants.SUFFIX_BEAN_PARAM_FUZZY,
                             type, ProcessJavaType(type), comment,
                             "auto_increment".equalsIgnoreCase(extra) ? true : false));
                 }
 
-                else if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, type)
-                        || ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)) {
+                else if (SqlTypeMapper.isDateTimeType(type)) {
 
                     // 添加date类
                     // fieldExtendList.add(new FieldInfo(field, propertyName,
@@ -247,8 +250,7 @@ public class BuilderTable {
 
                 // 跳过时间类型字段
                 String type = field.getSqlType();
-                if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)
-                        || ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, type)) {
+                if (SqlTypeMapper.isDateTimeType(type)) {
                     continue;
                 }
 
@@ -308,24 +310,36 @@ public class BuilderTable {
         return sb.toString();
     }
 
+    /**
+     * 将SQL类型转换为Java类型
+     * 使用增强的类型映射器，支持更多数据库类型
+     * 
+     * @param type SQL数据类型
+     * @return Java类型名称
+     */
     private static String ProcessJavaType(String type) {
-
-        if (ArrayUtils.contains(Constants.SQL_INTEGER_TYPE, type)) {
-            return "Integer";
-        } else if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)
-                || ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES,
-                        type)) {
-            return "Date";
-        } else if (ArrayUtils.contains(Constants.SQL_DECIMAL_TYPE, type)) {
-            return "BigDecimal";
-        } else if (ArrayUtils.contains(Constants.SQL_LONG_TYPE, type)) {
-            return "Long";
-        } else if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, type)) {
-            return "String";
-        }
-
-        else {
-            throw new RuntimeException("can not identify type : " + type);
+        try {
+            // 使用新的类型映射器
+            return SqlTypeMapper.getJavaType(type);
+        } catch (Exception e) {
+            log.error("类型转换失败，SQL类型: {}, 错误: {}", type, e.getMessage());
+            
+            // 回退到原有的类型映射逻辑
+            if (ArrayUtils.contains(Constants.SQL_INTEGER_TYPE, type)) {
+                return "Integer";
+            } else if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)
+                    || ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, type)) {
+                return "Date";
+            } else if (ArrayUtils.contains(Constants.SQL_DECIMAL_TYPE, type)) {
+                return "BigDecimal";
+            } else if (ArrayUtils.contains(Constants.SQL_LONG_TYPE, type)) {
+                return "Long";
+            } else if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, type)) {
+                return "String";
+            } else {
+                log.warn("未识别的SQL类型: {}，使用String作为默认类型", type);
+                return "String";
+            }
         }
     }
 

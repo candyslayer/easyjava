@@ -1,0 +1,46 @@
+package ${package.query};
+
+/**
+ * ${table.comment!} 查询参数
+ *
+ * @author ${author}
+ * @date ${date}
+ */
+public class ${table.beanName}Query extends BaseParam {
+
+<#list table.fieldList as field>
+    /**
+     * ${field.comment!}
+     */
+    private ${field.javaType} ${field.propertyName};
+
+    <#if field.javaType == "String">
+    /**
+     * ${field.comment!} - 模糊查询
+     */
+    private ${field.javaType} ${field.propertyName}Fuzzy;
+
+    </#if>
+</#list>
+
+<#list table.fieldList as field>
+    public ${field.javaType} get${field.propertyName?cap_first}() {
+        return ${field.propertyName};
+    }
+
+    public void set${field.propertyName?cap_first}(${field.javaType} ${field.propertyName}) {
+        this.${field.propertyName} = ${field.propertyName};
+    }
+
+    <#if field.javaType == "String">
+    public ${field.javaType} get${field.propertyName?cap_first}Fuzzy() {
+        return ${field.propertyName}Fuzzy;
+    }
+
+    public void set${field.propertyName?cap_first}Fuzzy(${field.javaType} ${field.propertyName}Fuzzy) {
+        this.${field.propertyName}Fuzzy = ${field.propertyName}Fuzzy;
+    }
+
+    </#if>
+</#list>
+}

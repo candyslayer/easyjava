@@ -1,0 +1,67 @@
+package ${package.service};
+
+import ${package.po}.${table.beanName};
+import ${package.query}.${table.beanName}Query;
+import com.easyjava.entity.vo.PaginationResultVO;
+
+import java.util.List;
+
+/**
+ * ${table.comment!} Service接口
+ *
+ * @author ${author}
+ * @date ${date}
+ */
+public interface ${table.beanName}Service {
+
+    /**
+     * 根据条件查询列表
+     */
+    List<${table.beanName}> findListByParam(${table.beanName}Query param);
+
+    /**
+     * 根据条件查询数量
+     */
+    Integer findCountByParam(${table.beanName}Query param);
+
+    /**
+     * 分页查询
+     */
+    PaginationResultVO<${table.beanName}> findListByPage(${table.beanName}Query param);
+
+    /**
+     * 新增
+     */
+    Integer add(${table.beanName} bean);
+
+    /**
+     * 批量新增
+     */
+    Integer addBatch(List<${table.beanName}> listBean);
+
+    /**
+     * 批量新增或者修改
+     */
+    Integer addOrUpdateBatch(List<${table.beanName}> listBean);
+
+<#if table.keyIndexMap?? && (table.keyIndexMap?size > 0)>
+    <#list table.keyIndexMap?keys as key>
+        <#assign keyIndex = table.keyIndexMap[key]>
+    /**
+     * 根据${keyIndex.comment}查询对象
+     */
+    ${table.beanName} get${table.beanName}By${keyIndex.keyName}(<#list keyIndex.keyFieldList as field>${field.javaType} ${field.propertyName}<#if field_has_next>, </#if></#list>);
+
+    /**
+     * 根据${keyIndex.comment}修改
+     */
+    Integer update${table.beanName}By${keyIndex.keyName}(${table.beanName} bean, <#list keyIndex.keyFieldList as field>${field.javaType} ${field.propertyName}<#if field_has_next>, </#if></#list>);
+
+    /**
+     * 根据${keyIndex.comment}删除
+     */
+    Integer delete${table.beanName}By${keyIndex.keyName}(<#list keyIndex.keyFieldList as field>${field.javaType} ${field.propertyName}<#if field_has_next>, </#if></#list>);
+
+    </#list>
+</#if>
+}

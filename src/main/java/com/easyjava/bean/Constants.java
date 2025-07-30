@@ -119,18 +119,90 @@ public class Constants {
                 .replace(".", "/");
     }
 
-    // sql类型
-    public final static String[] SQL_DATE_TIME_TYPES = new String[] { "datetime", "timestamp" };
+    // sql类型映射 - 扩展版本支持更多数据类型
+    
+    // 日期时间类型
+    public final static String[] SQL_DATE_TIME_TYPES = new String[] { 
+        "datetime", "timestamp", "timestamp with time zone", "timestamptz" 
+    };
 
+    // 日期类型
     public final static String[] SQL_DATE_TYPE = new String[] { "date" };
+    
+    // 时间类型
+    public final static String[] SQL_TIME_TYPE = new String[] { 
+        "time", "time with time zone", "timetz" 
+    };
 
-    public final static String[] SQL_DECIMAL_TYPE = new String[] { "decimal", "double", "float" };
+    // 布尔类型
+    public final static String[] SQL_BOOLEAN_TYPE = new String[] { 
+        "boolean", "bool", "bit" 
+    };
 
-    public final static String[] SQL_INTEGER_TYPE = new String[] { "int", "tinyint", "int unsigned" };
+    // 小整数类型
+    public final static String[] SQL_INTEGER_TYPE = new String[] { 
+        "int", "integer", "tinyint", "smallint", "mediumint", 
+        "int unsigned", "tinyint unsigned", "smallint unsigned", "mediumint unsigned",
+        "serial", "smallserial"
+    };
 
-    public final static String[] SQL_LONG_TYPE = new String[] { "bigint" };
+    // 长整数类型
+    public final static String[] SQL_LONG_TYPE = new String[] { 
+        "bigint", "bigint unsigned", "bigserial"
+    };
 
-    public final static String[] SQL_STRING_TYPE = new String[] { "varchar", "char", "text", "mediutext", "longtext" };
+    // 浮点数类型
+    public final static String[] SQL_FLOAT_TYPE = new String[] { 
+        "float", "real"
+    };
+
+    // 双精度类型
+    public final static String[] SQL_DOUBLE_TYPE = new String[] { 
+        "double", "double precision"
+    };
+
+    // 精确数值类型
+    public final static String[] SQL_DECIMAL_TYPE = new String[] { 
+        "decimal", "numeric", "money", "smallmoney"
+    };
+
+    // 字符串类型
+    public final static String[] SQL_STRING_TYPE = new String[] { 
+        "varchar", "char", "text", "mediumtext", "longtext", "tinytext",
+        "character", "character varying", "varchar2", "nvarchar", "nchar", "ntext",
+        "clob", "nclob", "longvarchar"
+    };
+
+    // 二进制数据类型
+    public final static String[] SQL_BINARY_TYPE = new String[] { 
+        "binary", "varbinary", "blob", "tinyblob", "mediumblob", "longblob",
+        "bytea", "raw", "long raw", "image"
+    };
+
+    // JSON类型
+    public final static String[] SQL_JSON_TYPE = new String[] { 
+        "json", "jsonb"
+    };
+
+    // UUID类型
+    public final static String[] SQL_UUID_TYPE = new String[] { 
+        "uuid"
+    };
+
+    // 枚举类型
+    public final static String[] SQL_ENUM_TYPE = new String[] { 
+        "enum"
+    };
+
+    // 几何类型（PostGIS等）
+    public final static String[] SQL_GEOMETRY_TYPE = new String[] { 
+        "geometry", "geography", "point", "linestring", "polygon"
+    };
+
+    // 数组类型（PostgreSQL）
+    public final static String[] SQL_ARRAY_TYPE = new String[] { 
+        "array"
+    };
 
     public static void main(String[] args) {
 
