@@ -20,6 +20,12 @@ public class ShardingUtils {
         if (shardingValue == null) {
             return baseTableName;
         }
+        
+        // 检查是否需要跨表分表
+        if (CrossTableShardingUtils.isCrossTableSharding(baseTableName)) {
+            String crossTableConfig = CrossTableShardingUtils.getCrossTableConfig(baseTableName);
+            return CrossTableShardingUtils.getCrossTableShardingTableName(baseTableName, shardingValue, strategy, crossTableConfig);
+        }
 
         switch (strategy.toLowerCase()) {
             case "hash":

@@ -125,4 +125,14 @@ public class ShardingConfigUtils {
         }
         return getShardingTables().contains(tableName);
     }
+    
+    /**
+     * 获取配置属性值
+     * @param key 配置键
+     * @param defaultValue 默认值
+     * @return 配置值
+     */
+    public static String getProperty(String key, String defaultValue) {
+        return shardingProps.getProperty(key, defaultValue);
+    }
 }
