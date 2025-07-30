@@ -229,7 +229,7 @@ public class BuildMapperXML {
             // 查询集合
             bw.write("\t<!-- 查询集合 --> ");
             bw.newLine();
-            bw.write("\t<select id=\"SelectList\" resultMap=\"base_result_map\">\r\n" + //
+            bw.write("\t<select id=\"selectList\" resultMap=\"base_result_map\">\r\n" + //
                     "\t\tselect \r\n" + //
                     "\t\t<include refid = \"" + BASE_COLUMN_LIST + "\"/>\r\n" + //
                     "\t\tFROM " + tableInfo.getTableName() + " " + tableAlias + "\r\n" + //
@@ -251,7 +251,7 @@ public class BuildMapperXML {
             // 查询数量
             bw.write("\t<!-- 查询数量 --> ");
             bw.newLine();
-            bw.write("\t<select id=\"SelectCount\" resultType = \"Integer\">");
+            bw.write("\t<select id=\"selectCount\" resultType = \"Integer\">");
             bw.newLine();
             bw.write("\t\tselect count(1) from " + tableInfo.getTableName() + " " + tableAlias);
             bw.newLine();
@@ -264,7 +264,7 @@ public class BuildMapperXML {
             // 添加根据参数删除记录
             bw.write("\t<!-- 根据参数删除记录 --> ");
             bw.newLine();
-            bw.write("\t<delete id=\"DeleteByParam\">");
+            bw.write("\t<delete id=\"deleteByParam\">");
             bw.newLine();
             bw.write("\t\tdelete from " + tableInfo.getTableName() + " " + tableAlias);
             bw.newLine();
@@ -277,7 +277,7 @@ public class BuildMapperXML {
             // 单条插入数据
             bw.write("\t<!-- 数据插入 --> ");
             bw.newLine();
-            bw.write("\t<insert id=\"Insert\" parameterType=\"" + Constants.PACKAGE_PO + "." + tableInfo.getBeanName()
+            bw.write("\t<insert id=\"insert\" parameterType=\"" + Constants.PACKAGE_PO + "." + tableInfo.getBeanName()
                     + "\">");
             bw.newLine();
 
@@ -292,7 +292,7 @@ public class BuildMapperXML {
 
             if (autoIncrement != null) {
                 bw.write("\t\t<selectKey keyProperty=\"bean." + autoIncrement.getPropertyName()
-                        + "\" resultType=\"Integer\" order=\"AFTER\">\r\n" + //
+                        + "\" resultType=\""+autoIncrement.getJavaType()+"\" order=\"AFTER\">\r\n" + //
                         "\t\t\tselect LAST_INSERT_ID()\r\n" + //
                         "\t\t</selectKey>");
                 bw.newLine();
@@ -340,7 +340,7 @@ public class BuildMapperXML {
             bw.write("\t<!-- 数据插入或更新 --> ");
             bw.newLine();
 
-            bw.write("\t<insert id=\"InsertOrUpdate\" parameterType=\"" + Constants.PACKAGE_PO + "."
+            bw.write("\t<insert id=\"insertOrUpdate\" parameterType=\"" + Constants.PACKAGE_PO + "."
                     + tableInfo.getBeanName()
                     + "\">");
             bw.newLine();
@@ -419,7 +419,7 @@ public class BuildMapperXML {
             bw.write("\t<!-- 数据批量插入 --> ");
             bw.newLine();
 
-            bw.write("\t<insert id=\"InsertBatch\" parameterType=\"" + Constants.PACKAGE_PO + "."
+            bw.write("\t<insert id=\"insertBatch\" parameterType=\"" + Constants.PACKAGE_PO + "."
                     + tableInfo.getBeanName()
                     + "\">");
             bw.newLine();
@@ -442,7 +442,7 @@ public class BuildMapperXML {
             // 批量插入或更新数据
             bw.write("\t<!-- 数据批量插入或更新 --> ");
             bw.newLine();
-            bw.write("\t<insert id=\"InsertOrUpdateBtach\" parameterType=\"" + Constants.PACKAGE_PO + "."
+            bw.write("\t<insert id=\"insertOrUpdateBatch\" parameterType=\"" + Constants.PACKAGE_PO + "."
                     + tableInfo.getBeanName()
                     + "\">");
             bw.newLine();
@@ -503,7 +503,7 @@ public class BuildMapperXML {
                 }
                 bw.write("\t<!-- 根据" + methodName + "查询 --> ");
                 bw.newLine();
-                bw.write("\t<select id=\"SelectBy" + methodName + "\" resultMap=\"base_result_map\">");
+                bw.write("\t<select id=\"selectBy" + methodName + "\" resultMap=\"base_result_map\">");
                 bw.newLine();
                 bw.write("\t\tselect\r\n" + //
                         "\t\t<include refid=\"base_column_list\"/>\r\n" + //
@@ -515,7 +515,7 @@ public class BuildMapperXML {
 
                 bw.write("\t<!-- 根据" + methodName + "删除 --> ");
                 bw.newLine();
-                bw.write("\t<delete id=\"DeleteBy" + methodName + "\">\r\n" + //
+                bw.write("\t<delete id=\"deleteBy" + methodName + "\">\r\n" + //
                         "\t\tdelete from " + tableInfo.getTableName() + " where " + paramName);
                 bw.newLine();
                 bw.write("\t</delete>");
@@ -524,7 +524,7 @@ public class BuildMapperXML {
 
                 bw.write("\t<!-- 根据" + methodName + "更新 --> ");
                 bw.newLine();
-                bw.write("\t<update id=\"UpdateBy" + methodName + "\" parameterType=\"" + Constants.PACKAGE_PO + "."
+                bw.write("\t<update id=\"updateBy" + methodName + "\" parameterType=\"" + Constants.PACKAGE_PO + "."
                         + tableInfo.getBeanName() + "\">");
                 bw.newLine();
                 bw.write("\t\tUPDATE " + tableInfo.getTableName());
@@ -552,7 +552,7 @@ public class BuildMapperXML {
             // 添加根据参数更新记录
             bw.write("\t<!-- 根据参数更新记录 --> ");
             bw.newLine();
-            bw.write("\t<update id=\"UpdateByParam\" parameterType=\"" + Constants.PACKAGE_PO + "." + tableInfo.getBeanName() + "\">");
+            bw.write("\t<update id=\"updateByParam\" parameterType=\"" + Constants.PACKAGE_PO + "." + tableInfo.getBeanName() + "\">");
             bw.newLine();
             bw.write("\t\tupdate " + tableInfo.getTableName() + " " + tableAlias);
             bw.newLine();

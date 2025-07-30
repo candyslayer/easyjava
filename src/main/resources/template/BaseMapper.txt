@@ -6,40 +6,40 @@ public interface BaseMapper<T, P> {
     /*
      * insert:(插入)
      */
-    Integer Insert(@Param("bean") T t);
+    Integer insert(@Param("bean") T t);
 
     /*
      * insertOrUpdate:(更新或插入)
      */
-    Integer InsertOrUpdate(@Param("bean") T t);
+    Integer insertOrUpdate(@Param("bean") T t);
 
     /*
-     * InsertBatch:(批量插入)
+     * insertBatch:(批量插入)
      */
-    Integer InsertBatch(@Param("list") List<T> list);
+    Integer insertBatch(@Param("list") List<T> list);
 
     /*
-     * InsertOrUpdateBtach:(批量插入或更新)
+     * insertOrUpdateBatch:(批量插入或更新)
      */
-    Integer InsertOrUpdateBtach(@Param("list") List<T> t);
+    Integer insertOrUpdateBatch(@Param("list") List<T> t);
 
     /*
-     * SelectList:(根据参数查询集合)
+     * selectList:(根据参数查询集合)
      */
-    List<T> SelectList(@Param("query") P p);
+    List<T> selectList(@Param("query") P p);
 
     /*
-     * SelectCount:(根据参数查询数量)
+     * selectCount:(根据参数查询数量)
      */
-    Integer SelectCount(@Param("query") P p);
+    Integer selectCount(@Param("query") P p);
 
     /*
-     * SelectCount:(根据参数删除记录)
+     * deleteByParam:(根据参数删除记录)
      */
-    void DeleteByParam(@Param("query") P p);
+    void deleteByParam(@Param("query") P p);
 
     /*
-     * UpdateByParam:(根据参数更新记录)
+     * updateByParam:(根据参数更新记录)
      */
-    Integer UpdateByParam(@Param("bean") T t, @Param("query") P p);
+    Integer updateByParam(@Param("bean") T t, @Param("query") P p);
 }

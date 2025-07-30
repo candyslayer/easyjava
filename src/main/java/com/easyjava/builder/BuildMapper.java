@@ -74,17 +74,17 @@ public class BuildMapper {
                     }
                 }
                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "查询");
-                bw.write("\tT SelectBy" + methodName + "(" + methodParam + ");");
+                bw.write("\tT selectBy" + methodName + "(" + methodParam + ");");
                 bw.newLine();
                 bw.newLine();
 
                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "更新");
-                bw.write("\tInteger UpdateBy" + methodName + "(" +"@Param(\"bean\") T t, "+ methodParam + ");");
+                bw.write("\tInteger updateBy" + methodName + "(" +"@Param(\"bean\") T t, "+ methodParam + ");");
                 bw.newLine();
                 bw.newLine();
 
                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "删除");
-                bw.write("\tInteger DeleteBy" + methodName + "(" + methodParam + ");");
+                bw.write("\tInteger deleteBy" + methodName + "(" + methodParam + ");");
                 bw.newLine();
                 bw.newLine();
             }

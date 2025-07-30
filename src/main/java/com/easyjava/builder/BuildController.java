@@ -154,9 +154,9 @@ public class BuildController {
                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "查询");
                 bw.write("\t@RequestMapping(\"/get" + methodName + "\")");
                 bw.newLine();
-                bw.write("\tpublic ResponseVO GetBy" + methodName + "(" + methodParam + ") {");
+                bw.write("\tpublic ResponseVO getBy" + methodName + "(" + methodParam + ") {");
                 bw.newLine();
-                bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".GetBy" + methodName + "("
+                bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".getBy" + methodName + "("
                         + queryParam + "));");
                 bw.write("\t}");
 
@@ -166,10 +166,10 @@ public class BuildController {
                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "更新");
                 bw.write("\t@RequestMapping(\"/update"+methodName+"\")");
                 bw.newLine();
-                bw.write("\tpublic ResponseVO UpdateBy" + methodName + "(" + beanName + " bean, "
+                bw.write("\tpublic ResponseVO updateBy" + methodName + "(" + beanName + " bean, "
                         + methodParam + ") {");
                 bw.newLine();
-                bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".UpdateBy" + methodName + "("
+                bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".updateBy" + methodName + "("
                         + "bean, " + queryParam + "));");
                 bw.newLine();
                 bw.write("\t}");
@@ -180,9 +180,9 @@ public class BuildController {
                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "删除");
                 bw.write("\t@RequestMapping(\"/delete" + methodName + "\")");
                 bw.newLine();
-                bw.write("\tpublic ResponseVO DeleteBy" + methodName + "(" + methodParam + ") {");
+                bw.write("\tpublic ResponseVO deleteBy" + methodName + "(" + methodParam + ") {");
                 bw.newLine();
-                bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".DeleteBy" + methodName + "("
+                bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".deleteBy" + methodName + "("
                         + queryParam + "));");
                 bw.newLine();
                 bw.write("\t}");

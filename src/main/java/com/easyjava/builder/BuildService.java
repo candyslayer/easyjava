@@ -126,17 +126,17 @@ public class BuildService {
                 }
 
                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "查询");
-                bw.write("\t"+tableInfo.getBeanName()+" GetBy" + methodName + "(" + methodParam + ");");
+                bw.write("\t"+tableInfo.getBeanName()+" getBy" + methodName + "(" + methodParam + ");");
                 bw.newLine();
                 bw.newLine();
 
                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "更新");
-                bw.write("\tInteger UpdateBy" + methodName + "("+tableInfo.getBeanName()+" bean, " + methodParam + ");");
+                bw.write("\tInteger updateBy" + methodName + "("+tableInfo.getBeanName()+" bean, " + methodParam + ");");
                 bw.newLine();
                 bw.newLine();
 
                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "删除");
-                bw.write("\tInteger DeleteBy" + methodName + "(" + methodParam + ");");
+                bw.write("\tInteger deleteBy" + methodName + "(" + methodParam + ");");
                 bw.newLine();
                 bw.newLine();
             }

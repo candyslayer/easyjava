@@ -92,7 +92,7 @@ public class BuildServiceImpl {
                                                         + tableInfo.getBeanParamName()
                                                         + " param) {");
                         bw.newLine();
-                        bw.write("\t\treturn this." + mapperBeanName + ".SelectList(param);");
+                        bw.write("\t\treturn this." + mapperBeanName + ".selectList(param);");
                         bw.newLine();
                         bw.write("\t}");
 
@@ -104,7 +104,7 @@ public class BuildServiceImpl {
                         bw.newLine();
                         bw.write("\tpublic Integer FindCountByParam(" + tableInfo.getBeanParamName() + " param) {");
                         bw.newLine();
-                        bw.write("\t\treturn this." + mapperBeanName + ".SelectCount(param);");
+                        bw.write("\t\treturn this." + mapperBeanName + ".selectCount(param);");
                         bw.newLine();
                         bw.write("\t}");
 
@@ -145,7 +145,7 @@ public class BuildServiceImpl {
                         bw.newLine();
                         bw.write("\tpublic Integer Add(" + tableInfo.getBeanName() + " bean) {");
                         bw.newLine();
-                        bw.write("\t\treturn this." + mapperBeanName + ".Insert(bean);");
+                        bw.write("\t\treturn this." + mapperBeanName + ".insert(bean);");
                         bw.newLine();
                         bw.write("\t}");
 
@@ -161,7 +161,7 @@ public class BuildServiceImpl {
                                         "\t\t\treturn 0;\r\n" + //
                                         "\t\t}");
                         bw.newLine();
-                        bw.write("\t\treturn this." + mapperBeanName + ".InsertBatch(listbean);");
+                        bw.write("\t\treturn this." + mapperBeanName + ".insertBatch(listbean);");
                         bw.newLine();
                         bw.write("\t}");
 
@@ -177,7 +177,7 @@ public class BuildServiceImpl {
                                         "\t\t\treturn 0;\r\n" + //
                                         "\t\t}");
                         bw.newLine();
-                        bw.write("\t\treturn this." + mapperBeanName + ".InsertOrUpdateBtach(listbean);");
+                        bw.write("\t\treturn this." + mapperBeanName + ".insertOrUpdateBatch(listbean);");
                         bw.newLine();
                         bw.write("\t}");
 
@@ -213,10 +213,10 @@ public class BuildServiceImpl {
                                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "查询");
                                 bw.write("\t@Override");
                                 bw.newLine();
-                                bw.write("\tpublic " + tableInfo.getBeanName() + " GetBy" + methodName + "("
+                                bw.write("\tpublic " + tableInfo.getBeanName() + " getBy" + methodName + "("
                                                 + methodParam + ") {");
                                 bw.newLine();
-                                bw.write("\t\treturn this." + mapperBeanName + ".SelectBy" + methodName + "("
+                                bw.write("\t\treturn this." + mapperBeanName + ".selectBy" + methodName + "("
                                                 + queryParam + ");");
                                 bw.write("\t}");
 
@@ -226,11 +226,11 @@ public class BuildServiceImpl {
                                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "更新");
                                 bw.write("\t@Override");
                                 bw.newLine();
-                                bw.write("\tpublic Integer UpdateBy" + methodName + "(" + tableInfo.getBeanName()
+                                bw.write("\tpublic Integer updateBy" + methodName + "(" + tableInfo.getBeanName()
                                                 + " bean, "
                                                 + methodParam + ") {");
                                 bw.newLine();
-                                bw.write("\t\treturn this." + mapperBeanName + ".UpdateBy" + methodName + "("
+                                bw.write("\t\treturn this." + mapperBeanName + ".updateBy" + methodName + "("
                                                 + "bean, " + queryParam + ");");
                                 bw.newLine();
                                 bw.write("\t}");
@@ -241,9 +241,9 @@ public class BuildServiceImpl {
                                 BuildComment.CreateFieldComment(bw, "根据" + methodName + "删除");
                                 bw.write("\t@Override");
                                 bw.newLine();
-                                bw.write("\tpublic Integer DeleteBy" + methodName + "(" + methodParam + ") {");
+                                bw.write("\tpublic Integer deleteBy" + methodName + "(" + methodParam + ") {");
                                 bw.newLine();
-                                bw.write("\t\treturn this." + mapperBeanName + ".DeleteBy" + methodName + "("
+                                bw.write("\t\treturn this." + mapperBeanName + ".deleteBy" + methodName + "("
                                                 + queryParam + ");");
                                 bw.newLine();
                                 bw.write("\t}");
