@@ -38,6 +38,12 @@ public class PropertiesUtils {
     }
 
     public static String geString(String key) {
+        // 优先从系统属性读取，这样Maven插件设置的参数就会覆盖配置文件中的值
+        String systemValue = System.getProperty(key);
+        if (systemValue != null) {
+            return systemValue;
+        }
+        // 如果系统属性中没有，则从配置文件读取
         return properMap.get(key);
     }
 

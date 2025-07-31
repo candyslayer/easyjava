@@ -10,8 +10,6 @@ import org.apache.maven.project.MavenProject;
 
 import com.easyjava.bean.TableInfo;
 import com.easyjava.builder.*;
-import com.easyjava.LogbackConfig;
-import com.easyjava.utils.PropertiesUtils;
 
 import java.util.List;
 import java.io.File;
@@ -118,7 +116,7 @@ public class CodeGeneratorMojo extends AbstractMojo {
             setSystemProperties();
             
             // 配置日志
-            LogbackConfig.configureLogback();
+            // LogbackConfig.configureLogback();
             
             // 创建输出目录
             File outputDir = new File(outputPath);
@@ -205,7 +203,7 @@ public class CodeGeneratorMojo extends AbstractMojo {
         
         // 其他配置
         if (author != null) {
-            System.setProperty("author", author);
+            System.setProperty("auther.comment", author);
         }
         if (packageBase != null) {
             System.setProperty("package.base", packageBase);
@@ -215,6 +213,39 @@ public class CodeGeneratorMojo extends AbstractMojo {
         }
         
         System.setProperty("ignore.table.prefix", String.valueOf(ignoreTablePrefix));
+        
+        // 设置必需的后缀配置
+        System.setProperty("suffix.bean.param", "Query");
+        System.setProperty("suffix.bean.param.fuzzy", "Fuzzy");
+        System.setProperty("suffix.bean.param.time.start", "Start");
+        System.setProperty("suffix.bean.param.time.end", "End");
+        System.setProperty("suffix.mapper", "Mapper");
+        
+        // 设置包名配置
+        System.setProperty("package.po", "entity.po");
+        System.setProperty("package.vo", "entity.vo");
+        System.setProperty("package.param", "entity.query");
+        System.setProperty("package.utils", "utils");
+        System.setProperty("package.enums", "enums");
+        System.setProperty("package.mapper", "mapper");
+        System.setProperty("package.service", "service");
+        System.setProperty("package.service.impl", "service.impl");
+        System.setProperty("package.exception", "exception");
+        System.setProperty("package.controller", "controller");
+        System.setProperty("package.exception.strategy", "exception.strategy");
+        
+        // 设置JSON忽略配置
+        System.setProperty("ignore.bean.tojson.field", "password");
+        System.setProperty("ignore.bean.tojson.expression", "@JsonIgnore");
+        System.setProperty("ignore.bean.tojson.class", "import com.fasterxml.jackson.annotation.JsonIgnore;");
+        
+        // 设置日期序列化配置
+        System.setProperty("bean.date.serialization", "@JsonFormat(pattern = \"%s\",timezone = \"GMT+8\")");
+        System.setProperty("bean.date.serialization.class", "import com.fasterxml.jackson.annotation.JsonFormat;");
+        
+        // 设置日期反序列化配置
+        System.setProperty("bean.data.deserializatio", "@DateTimeFormat(pattern = \"%s\")");
+        System.setProperty("bean.date.deserializatio.class", "import org.springframework.format.annotation.DateTimeFormat;");
         
         if (tablePrefix != null) {
             System.setProperty("table.prefix", tablePrefix);

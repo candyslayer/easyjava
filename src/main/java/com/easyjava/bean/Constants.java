@@ -14,7 +14,7 @@ public class Constants {
     public static String SUFFIX_BEAN_PARAM_TIME_END;
     public static String SUFFIX_MAPPER;
 
-    private static String PATH_BASE;
+    public static String PATH_BASE;
     public static String PATH_PO;
     public static String PATH_VO;
     public static String PATH_UTILS;
@@ -28,7 +28,6 @@ public class Constants {
     public static String PATH_CONTROLLER;
     public static String PATH_EXCEPTION_STRATEGY;
 
-    private static String PATH_JAVA = "java";
     public static String PATH_RESOURCES = "resources";
 
     private static String PACKAGE_BASE;
@@ -60,7 +59,7 @@ public class Constants {
         AUTHER_COMMENT = PropertiesUtils.geString("auther.comment");
 
         // 构建表信息
-        IGNORE_TABLE_PREFIX = Boolean.valueOf(PropertiesUtils.geString(""));
+        IGNORE_TABLE_PREFIX = Boolean.valueOf(PropertiesUtils.geString("ignore.table.prefix"));
 
         // 后缀信息
         SUFFIX_BEAN_PARAM = PropertiesUtils.geString("suffix.bean.param");
@@ -97,8 +96,20 @@ public class Constants {
         PACKAGE_EXCEPTION = PACKAGE_BASE + "." + PropertiesUtils.geString("package.exception");
         PACKAGE_EXCEPTION_STRATEGY = PACKAGE_BASE + "." + PropertiesUtils.geString("package.exception.strategy");
 
-        // 生成基本路径
-        PATH_BASE = (PropertiesUtils.geString("path.base") + "/" + PATH_JAVA + "/" + PACKAGE_BASE).replace(".", "/");
+        // 生成基本路径 - 对于Maven插件，直接使用用户指定的输出路径
+        String basePath = PropertiesUtils.geString("path.base");
+        
+        // 调试输出
+        System.out.println("DEBUG - basePath: " + basePath);
+        System.out.println("DEBUG - PACKAGE_BASE: " + PACKAGE_BASE);
+        
+        if (PACKAGE_BASE != null && !PACKAGE_BASE.trim().isEmpty()) {
+            PATH_BASE = basePath + "/" + PACKAGE_BASE.replace(".", "/");
+        } else {
+            PATH_BASE = basePath;
+        }
+        
+        System.out.println("DEBUG - PATH_BASE: " + PATH_BASE);
         // 生成类路径
         PATH_PO = (PATH_BASE + "/" + PropertiesUtils.geString("package.po")).replace(".", "/");
         PATH_VO = (PATH_BASE + "/" + PropertiesUtils.geString("package.vo")).replace(".", "/");

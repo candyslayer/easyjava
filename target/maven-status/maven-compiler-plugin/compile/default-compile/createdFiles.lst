@@ -16,9 +16,7 @@ com\easyjava\mojo\InitMojo.class
 com\easyjava\test\SqlTypeMappingTest.class
 com\easyjava\utils\CrossTableShardingUtils.class
 com\easyjava\utils\JsonUtils.class
-com\easyjava\LogbackConfig.class
 com\easyjava\bean\TableInfo.class
-com\easyjava\App.class
 com\easyjava\builder\BuildServiceImpl.class
 com\easyjava\builder\BuildMapper.class
 com\easyjava\builder\BuildQuery.class

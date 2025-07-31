@@ -3,7 +3,6 @@ package com.easyjava.builder;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -116,14 +115,13 @@ public class BuildBase {
 
         File javaFile = new File(folder, fileName + ".java");
 
-        String templatePath = BuildBase.class.getClassLoader().getResource("template/" + fileName + ".txt")
-                .getPath();
+        String templatePath = "template/" + fileName + ".txt";
 
         try (OutputStream out = new FileOutputStream(javaFile);
                 OutputStreamWriter outw = new OutputStreamWriter(out, "utf-8");
                 BufferedWriter bw = new BufferedWriter(outw);
-                InputStream in = new FileInputStream(
-                        templatePath);
+                InputStream in = BuildBase.class.getClassLoader()
+                        .getResourceAsStream(templatePath);
                 InputStreamReader inr = new InputStreamReader(in);
                 BufferedReader br = new BufferedReader(inr)) {
 
