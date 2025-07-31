@@ -10,6 +10,7 @@ import org.apache.maven.project.MavenProject;
 
 import com.easyjava.bean.TableInfo;
 import com.easyjava.builder.*;
+import com.easyjava.utils.PluginConfigManager;
 
 import java.util.List;
 import java.io.File;
@@ -112,7 +113,10 @@ public class CodeGeneratorMojo extends AbstractMojo {
         getLog().info("=== EasyJava代码生成器开始执行 ===");
         
         try {
-            // 设置系统属性，供PropertiesUtils使用
+            // 启用插件模式，完全脱离application.properties文件
+            com.easyjava.utils.PropertiesUtils.enablePluginMode();
+            
+            // 设置插件配置，供PropertiesUtils使用
             setSystemProperties();
             
             // 配置日志
@@ -184,74 +188,45 @@ public class CodeGeneratorMojo extends AbstractMojo {
     }
 
     /**
-     * 设置系统属性，供现有的PropertiesUtils使用
+     * 设置插件配置，供现有的PropertiesUtils使用
      */
     private void setSystemProperties() {
-        // 数据库配置
+        // 清空并初始化默认配置
+        PluginConfigManager.clearConfig();
+        PluginConfigManager.initDefaultConfig();
+        
+        // 设置数据库配置
         if (dbUrl != null) {
-            System.setProperty("spring.datasource.url", dbUrl);
+            PluginConfigManager.setConfig("spring.datasource.url", dbUrl);
         }
         if (dbUsername != null) {
-            System.setProperty("spring.datasource.username", dbUsername);
+            PluginConfigManager.setConfig("spring.datasource.username", dbUsername);
         }
         if (dbPassword != null) {
-            System.setProperty("spring.datasource.password", dbPassword);
+            PluginConfigManager.setConfig("spring.datasource.password", dbPassword);
         }
         if (dbDriver != null) {
-            System.setProperty("spring.datasource.driver-class-name", dbDriver);
+            PluginConfigManager.setConfig("spring.datasource.driver-class-name", dbDriver);
         }
         
-        // 其他配置
+        // 设置其他配置
         if (author != null) {
-            System.setProperty("auther.comment", author);
+            PluginConfigManager.setConfig("auther.comment", author);
         }
         if (packageBase != null) {
-            System.setProperty("package.base", packageBase);
+            PluginConfigManager.setConfig("package.base", packageBase);
         }
         if (outputPath != null) {
-            System.setProperty("path.base", outputPath);
+            PluginConfigManager.setConfig("path.base", outputPath);
         }
         
-        System.setProperty("ignore.table.prefix", String.valueOf(ignoreTablePrefix));
-        
-        // 设置必需的后缀配置
-        System.setProperty("suffix.bean.param", "Query");
-        System.setProperty("suffix.bean.param.fuzzy", "Fuzzy");
-        System.setProperty("suffix.bean.param.time.start", "Start");
-        System.setProperty("suffix.bean.param.time.end", "End");
-        System.setProperty("suffix.mapper", "Mapper");
-        
-        // 设置包名配置
-        System.setProperty("package.po", "entity.po");
-        System.setProperty("package.vo", "entity.vo");
-        System.setProperty("package.param", "entity.query");
-        System.setProperty("package.utils", "utils");
-        System.setProperty("package.enums", "enums");
-        System.setProperty("package.mapper", "mapper");
-        System.setProperty("package.service", "service");
-        System.setProperty("package.service.impl", "service.impl");
-        System.setProperty("package.exception", "exception");
-        System.setProperty("package.controller", "controller");
-        System.setProperty("package.exception.strategy", "exception.strategy");
-        
-        // 设置JSON忽略配置
-        System.setProperty("ignore.bean.tojson.field", "password");
-        System.setProperty("ignore.bean.tojson.expression", "@JsonIgnore");
-        System.setProperty("ignore.bean.tojson.class", "import com.fasterxml.jackson.annotation.JsonIgnore;");
-        
-        // 设置日期序列化配置
-        System.setProperty("bean.date.serialization", "@JsonFormat(pattern = \"%s\",timezone = \"GMT+8\")");
-        System.setProperty("bean.date.serialization.class", "import com.fasterxml.jackson.annotation.JsonFormat;");
-        
-        // 设置日期反序列化配置
-        System.setProperty("bean.data.deserializatio", "@DateTimeFormat(pattern = \"%s\")");
-        System.setProperty("bean.date.deserializatio.class", "import org.springframework.format.annotation.DateTimeFormat;");
+        PluginConfigManager.setConfig("ignore.table.prefix", String.valueOf(ignoreTablePrefix));
         
         if (tablePrefix != null) {
-            System.setProperty("table.prefix", tablePrefix);
+            PluginConfigManager.setConfig("table.prefix", tablePrefix);
         }
         
-        System.setProperty("sharding.enabled", String.valueOf(shardingEnabled));
+        PluginConfigManager.setConfig("sharding.enabled", String.valueOf(shardingEnabled));
     }
 
     /**

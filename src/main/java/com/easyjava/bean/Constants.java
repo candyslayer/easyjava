@@ -98,18 +98,11 @@ public class Constants {
 
         // 生成基本路径 - 对于Maven插件，直接使用用户指定的输出路径
         String basePath = PropertiesUtils.geString("path.base");
-        
-        // 调试输出
-        System.out.println("DEBUG - basePath: " + basePath);
-        System.out.println("DEBUG - PACKAGE_BASE: " + PACKAGE_BASE);
-        
         if (PACKAGE_BASE != null && !PACKAGE_BASE.trim().isEmpty()) {
             PATH_BASE = basePath + "/" + PACKAGE_BASE.replace(".", "/");
         } else {
             PATH_BASE = basePath;
         }
-        
-        System.out.println("DEBUG - PATH_BASE: " + PATH_BASE);
         // 生成类路径
         PATH_PO = (PATH_BASE + "/" + PropertiesUtils.geString("package.po")).replace(".", "/");
         PATH_VO = (PATH_BASE + "/" + PropertiesUtils.geString("package.vo")).replace(".", "/");

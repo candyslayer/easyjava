@@ -21,6 +21,7 @@ com\easyjava\bean\TableInfo.class
 com\easyjava\builder\BuildServiceImpl.class
 com\easyjava\builder\BuildMapper.class
 com\easyjava\builder\BuildQuery.class
+com\easyjava\utils\PluginConfigManager.class
 com\easyjava\utils\CrossTableShardingManager.class
 com\easyjava\builder\BuilderTable.class
 com\easyjava\utils\ShardingConfigUtils.class
