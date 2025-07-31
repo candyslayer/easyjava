@@ -159,6 +159,67 @@ src/main/java/
 - **哈希分表**: 字符串、ID类型字段  
 - **范围分表**: 数值类型字段
 
+## 编译、安装和使用
+
+这个项目是一个Maven插件，它会被编译成一个JAR包。其他项目可以通过在`pom.xml`中引用这个插件来使用它的功能，而不需要直接依赖JAR包。
+
+### 1. 编译和安装到本地Maven仓库
+
+在插件项目（`easyjava-maven-plugin`）的根目录下，执行以下命令：
+
+```bash
+# 清理、编译、测试并安装到本地Maven仓库
+mvn clean install
+```
+
+这个命令会完成以下操作：
+- **clean**: 清理`target`目录
+- **compile**: 编译源代码
+- **test**: 运行测试用例
+- **package**: 将项目打包成JAR文件
+- **install**: 将打包好的JAR文件安装到您的本地Maven仓库（通常在 `~/.m2/repository` 目录下）
+
+安装成功后，您就可以在其他项目中使用这个插件了。
+
+### 2. 在其他项目中使用插件
+
+要在您的其他项目中使用`easyjava-maven-plugin`，请在该项目的`pom.xml`文件中添加以下配置：
+
+```xml
+<build>
+    <plugins>
+        <plugin>
+            <groupId>com.easyjava</groupId>
+            <artifactId>easyjava-maven-plugin</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <configuration>
+                <!-- 在这里配置插件参数 -->
+                <dbUrl>jdbc:mysql://localhost:3306/your_database</dbUrl>
+                <dbUsername>your_username</dbUsername>
+                <dbPassword>your_password</dbPassword>
+                <packageBase>com.yourcompany.yourproject</packageBase>
+                <!-- 其他参数... -->
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
+```
+
+**重要提示**：
+- 确保`<groupId>`, `<artifactId>`, 和 `<version>`与插件项目的`pom.xml`中的定义完全一致。
+- 由于版本是`1.0-SNAPSHOT`，Maven会检查本地仓库中是否有更新。
+
+### 3. 执行代码生成
+
+配置完成后，在您的项目根目录下执行以下命令即可生成代码：
+
+```bash
+# 执行代码生成
+mvn easyjava:generate
+```
+
+Maven会自动从本地仓库找到`easyjava-maven-plugin`插件并执行其`generate`目标。
+
 ## 与IDE集成
 
 ### IntelliJ IDEA
