@@ -11,6 +11,7 @@ com\easyjava\mojo\CodeGeneratorMojo.class
 com\easyjava\utils\DateUtils.class
 com\easyjava\builder\BuildPo.class
 com\easyjava\test\CrossTableShardingTest.class
+com\easyjava\mojo\InfoMojo.class
 com\easyjava\utils\ShardingUtils.class
 com\easyjava\mojo\InitMojo.class
 com\easyjava\test\SqlTypeMappingTest.class

@@ -1,19 +1,66 @@
-# EasyJava Maven Plugin
+# EasyJava Maven Plugin 📦
 
-EasyJava Maven Plugin 是一个强大的代码生成插件，可以从数据库表结构自动生成完整的Java CRUD代码。
+![Version](https://img.shields.io/badge/version-1.0--SNAPSHOT-blue)
+![Java](https://img.shields.io/badge/Java-8%2B-orange)
+![Maven](https://img.shields.io/badge/Maven-3.6%2B-red)
+![MySQL](https://img.shields.io/badge/MySQL-5.7%2B-blue)
 
-## 功能特性
+EasyJava Maven Plugin 是一个强大的 Java 代码生成插件，能够从 MySQL 数据库表结构自动生成完整的企业级 CRUD 代码。专为提高开发效率和代码一致性而设计。
 
-- 🚀 **一键生成**: 从数据库表自动生成完整的CRUD代码
-- 📦 **完整架构**: 生成Entity、Query、Mapper、Service、Controller等完整分层代码
-- 🔄 **分表支持**: 内置分表功能，支持时间、哈希、范围等多种分表策略  
-- 🎯 **高度可配置**: 支持包名、作者、输出路径等多种自定义配置
-- 📋 **表过滤**: 支持包含/排除特定表的代码生成
-- 🔧 **Maven集成**: 完美集成Maven构建流程
+## ✨ 核心特性
 
-## 快速开始
+- 🚀 **一键生成完整CRUD**: 从数据库表自动生成 Entity、Query、Mapper、Service、Controller 等完整分层架构代码
+- � **企业级代码模板**: 内置Spring Boot + MyBatis架构的最佳实践代码模板
+- 🔄 **智能类型映射**: 自动将MySQL数据类型映射为Java类型，支持所有常用数据类型
+- 🎯 **高度可配置**: 支持包名、作者、输出路径、注解等多维度自定义配置
+- 📋 **灵活表过滤**: 支持包含/排除特定表，支持表前缀处理
+- 🔧 **Maven完美集成**: 无缝集成Maven构建流程，支持命令行和配置文件两种使用方式
+- 🛠️ **分表支持**: 内置分表功能支持（实验性功能）
+- 📝 **详细日志**: 提供详细的生成过程日志和调试信息
+- 🔒 **安全配置**: 支持敏感信息的系统属性覆盖机制
 
-### 1. 在项目的 pom.xml 中添加插件
+## 🎯 生成的代码组件
+
+### 核心组件
+- **Entity/PO类**: 数据库表对应的实体类，包含完整的字段映射和注解
+- **Query参数类**: 查询条件封装类，支持模糊查询和时间范围查询
+- **Mapper接口**: MyBatis数据访问层接口，包含基础CRUD操作
+- **Mapper XML**: MyBatis映射文件，包含完整的SQL语句
+- **Service接口**: 业务逻辑层接口定义
+- **Service实现**: 业务逻辑层具体实现
+- **Controller类**: RESTful API控制器，包含完整的HTTP接口
+
+### 基础框架组件
+- **基础工具类**: 日期处理、分页、响应封装等通用工具
+- **异常处理框架**: 统一异常处理和错误响应机制
+- **分页组件**: 完整的分页查询支持
+- **响应封装**: 统一的API响应格式
+
+## 🚀 快速开始
+
+### 1. 环境要求
+
+- **Java**: 8 或更高版本
+- **Maven**: 3.6 或更高版本  
+- **MySQL**: 5.7 或更高版本
+- **Spring Boot**: 2.0+ （生成的代码基于此版本）
+
+### 2. 安装插件
+
+目前插件处于开发阶段，需要手动安装到本地Maven仓库：
+
+```bash
+# 克隆项目
+git clone https://github.com/candyslayer/easyjava.git
+cd easyjava
+
+# 编译并安装到本地仓库
+mvn clean install
+```
+
+### 3. 在项目中使用
+
+#### 方式一：pom.xml配置（推荐）
 
 ```xml
 <build>
@@ -24,130 +71,67 @@ EasyJava Maven Plugin 是一个强大的代码生成插件，可以从数据库�
             <version>1.0-SNAPSHOT</version>
             <configuration>
                 <!-- 数据库连接配置 -->
-                <dbUrl>jdbc:mysql://localhost:3306/your_database</dbUrl>
+                <dbUrl>jdbc:mysql://localhost:3306/your_database?useUnicode=true&amp;characterEncoding=utf8</dbUrl>
                 <dbUsername>your_username</dbUsername>
                 <dbPassword>your_password</dbPassword>
                 
                 <!-- 代码生成配置 -->
                 <packageBase>com.yourcompany.yourproject</packageBase>
                 <author>Your Name</author>
-                <outputPath>${project.basedir}/src/main/java</outputPath>
+                <outputPath>src/main/java</outputPath>
+                
+                <!-- 可选配置 -->
+                <ignoreTablePrefix>true</ignoreTablePrefix>
+                <includeTables>user,order,product</includeTables>
+                <!-- <excludeTables>temp_table,log_table</excludeTables> -->
             </configuration>
         </plugin>
     </plugins>
 </build>
 ```
 
-### 2. 执行代码生成
-
+然后执行：
 ```bash
-# 生成代码
 mvn easyjava:generate
-
-# 或者指定具体参数
-mvn easyjava:generate -Deasyjava.db.url=jdbc:mysql://localhost:3306/test -Deasyjava.db.username=root -Deasyjava.db.password=123456
 ```
 
-## 配置参数
-
-| 参数名 | 默认值 | 说明 |
-|--------|--------|------|
-| `dbUrl` | 无 | 数据库连接URL |
-| `dbUsername` | 无 | 数据库用户名 |
-| `dbPassword` | 无 | 数据库密码 |
-| `dbDriver` | `com.mysql.cj.jdbc.Driver` | 数据库驱动类名 |
-| `outputPath` | `${project.build.directory}/generated-sources/easyjava` | 代码生成输出目录 |
-| `author` | `EasyJava Generator` | 代码注释中的作者名称 |
-| `packageBase` | `com.example` | 生成代码的包名前缀 |
-| `ignoreTablePrefix` | `true` | 是否忽略表前缀 |
-| `tablePrefix` | 无 | 表前缀列表（逗号分隔） |
-| `shardingEnabled` | `false` | 是否启用分表功能 |
-| `includeTables` | 无 | 需要包含的表名列表（逗号分隔） |
-| `excludeTables` | 无 | 需要排除的表名列表（逗号分隔） |
-
-## 使用示例
-
-### 基本使用
-
-```xml
-<plugin>
-    <groupId>com.easyjava</groupId>
-    <artifactId>easyjava-maven-plugin</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <configuration>
-        <dbUrl>jdbc:mysql://localhost:3306/blog</dbUrl>
-        <dbUsername>root</dbUsername>
-        <dbPassword>123456</dbPassword>
-        <packageBase>com.myblog</packageBase>
-        <author>张三</author>
-    </configuration>
-</plugin>
-```
-
-### 高级配置
-
-```xml
-<plugin>
-    <groupId>com.easyjava</groupId>
-    <artifactId>easyjava-maven-plugin</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <configuration>
-        <!-- 数据库配置 -->
-        <dbUrl>jdbc:mysql://localhost:3306/ecommerce</dbUrl>
-        <dbUsername>dev_user</dbUsername>
-        <dbPassword>dev_password</dbPassword>
-        
-        <!-- 代码生成配置 -->
-        <packageBase>com.ecommerce.system</packageBase>
-        <author>开发团队</author>
-        <outputPath>${project.basedir}/src/main/java</outputPath>
-        
-        <!-- 表过滤配置 -->
-        <includeTables>user,product,order</includeTables>
-        <excludeTables>temp_table,log_table</excludeTables>
-        
-        <!-- 分表配置 -->
-        <shardingEnabled>true</shardingEnabled>
-        
-        <!-- 表前缀配置 -->
-        <ignoreTablePrefix>true</ignoreTablePrefix>
-        <tablePrefix>sys_,biz_</tablePrefix>
-    </configuration>
-</plugin>
-```
-
-### 命令行参数
+#### 方式二：命令行参数（灵活）
 
 ```bash
-# 使用命令行参数覆盖配置
 mvn easyjava:generate \
-    -Deasyjava.db.url=jdbc:mysql://localhost:3306/test \
-    -Deasyjava.db.username=root \
-    -Deasyjava.db.password=123456 \
-    -Deasyjava.package.base=com.test \
-    -Deasyjava.author="测试开发者" \
-    -Deasyjava.include.tables=user,role
+    -Deasyjava.db.url="jdbc:mysql://localhost:3306/test?useUnicode=true&characterEncoding=utf8" \
+    -Deasyjava.db.username="root" \
+    -Deasyjava.db.password="123456" \
+    -Deasyjava.package.base="com.example.demo" \
+    -Deasyjava.author="张三" \
+    -Deasyjava.output.path="src/main/java"
 ```
 
-## 生成的代码结构
+## ⚙️ 配置参数详解
 
-执行插件后，会为每个数据库表生成以下文件：
+### 必需参数
 
-```
-src/main/java/
-└── com/yourpackage/
-    ├── entity/
-    │   └── User.java              # 实体类
-    ├── query/
-    │   └── UserQuery.java         # 查询参数类
-    ├── mapper/
-    │   ├── UserMapper.java        # Mapper接口
-    │   └── UserMapper.xml         # MyBatis XML映射
-    ├── service/
-    │   ├── UserService.java       # Service接口
-    │   └── impl/
-    │       └── UserServiceImpl.java  # Service实现类
-    └── controller/
+| 参数名 | 说明 | 示例 |
+|--------|------|------|
+| `easyjava.db.url` | 数据库连接URL | `jdbc:mysql://localhost:3306/test` |
+| `easyjava.db.username` | 数据库用户名 | `root` |
+| `easyjava.db.password` | 数据库密码 | `123456` |
+
+### 可选参数
+
+| 参数名 | 默认值 | 说明 | 示例 |
+|--------|--------|------|------|
+| `easyjava.db.driver` | `com.mysql.cj.jdbc.Driver` | 数据库驱动类名 | `com.mysql.cj.jdbc.Driver` |
+| `easyjava.package.base` | `com.example` | 生成代码的包名前缀 | `com.yourcompany.project` |
+| `easyjava.author` | `EasyJava Generator` | 代码注释中的作者名称 | `张三` |
+| `easyjava.output.path` | `src/main/java` | 代码生成输出目录 | `src/main/java` |
+| `easyjava.ignore.table.prefix` | `true` | 是否忽略表前缀 | `true` |
+| `easyjava.table.prefix` | 无 | 表前缀列表（逗号分隔） | `sys_,biz_` |
+| `easyjava.include.tables` | 无 | 需要包含的表名列表（逗号分隔） | `user,order,product` |
+| `easyjava.exclude.tables` | 无 | 需要排除的表名列表（逗号分隔） | `temp_table,log_table` |
+| `easyjava.sharding.enabled` | `false` | 是否启用分表功能 | `true` |
+
+## 📁 生成的代码结构
         └── UserController.java    # 控制器
 ```
 

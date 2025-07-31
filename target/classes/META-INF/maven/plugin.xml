@@ -190,6 +190,22 @@ Call mvn easyjava:help -Ddetail=true -Dgoal=&lt;goal-name&gt; to display paramet
       </configuration>
     </mojo>
     <mojo>
+      <goal>info</goal>
+      <description>显示EasyJava插件的详细信息和使用说明</description>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <implementation>com.easyjava.mojo.InfoMojo</implementation>
+      <language>java</language>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
+      <threadSafe>false</threadSafe>
+      <parameters/>
+    </mojo>
+    <mojo>
       <goal>init</goal>
       <description>初始化EasyJava插件配置 在项目中创建基础的配置文件和示例配置</description>
       <requiresDirectInvocation>false</requiresDirectInvocation>
