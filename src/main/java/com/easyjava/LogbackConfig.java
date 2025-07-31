@@ -24,7 +24,7 @@ public class LogbackConfig  {
 
         //之前我这里设置的是root导致设置的setAdditive不起作用，应该设置所需要拦截向上传递父类的包，避免打印两次日志
         ch.qos.logback.classic.Logger rootLogger = context.getLogger("com.easyjava.builder");
-        rootLogger.addAppender(consoleAppender);
+        //rootLogger.addAppender(consoleAppender);
         rootLogger.setAdditive(false);
     }
 }

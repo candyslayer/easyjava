@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>easyjava-plugin-test</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>EasyJava Plugin Test Project</name>
+    <description>使用EasyJava插件的示例项目</description>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- Spring Boot Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+        
+        <!-- MyBatis -->
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>3.0.2</version>
+        </dependency>
+        
+        <!-- MySQL Driver -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>8.1.0</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- EasyJava代码生成插件 -->
+            <plugin>
+                <groupId>com.easyjava</groupId>
+                <artifactId>easyjava-maven-plugin</artifactId>
+                <version>1.0-SNAPSHOT</version>
+                <configuration>
+                    <!-- 数据库连接配置 -->
+                    <dbUrl>jdbc:mysql://localhost:3306/blade</dbUrl>
+                    <dbUsername>root</dbUsername>
+                    <dbPassword>123456</dbPassword>
+                    <dbDriver>com.mysql.cj.jdbc.Driver</dbDriver>
+                    
+                    <!-- 代码生成配置 -->
+                    <packageBase>com.example.demo</packageBase>
+                    <author>EasyJava开发者</author>
+                    <outputPath>${project.basedir}/src/main/java</outputPath>
+                    
+                    <!-- 表过滤配置（可选） -->
+                    <!-- <includeTables>blade_user,blade_role</includeTables> -->
+                    <!-- <excludeTables>temp_table,log_table</excludeTables> -->
+                    
+                    <!-- 分表配置 -->
+                    <shardingEnabled>true</shardingEnabled>
+                    
+                    <!-- 表前缀配置 -->
+                    <ignoreTablePrefix>true</ignoreTablePrefix>
+                    <tablePrefix>blade_,sys_</tablePrefix>
+                </configuration>
+            </plugin>
+            
+            <!-- Maven编译插件 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <!-- 使用示例的profile配置 -->
+    <profiles>
+        <!-- 开发环境 -->
+        <profile>
+            <id>dev</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.easyjava</groupId>
+                        <artifactId>easyjava-maven-plugin</artifactId>
+                        <configuration>
+                            <dbUrl>jdbc:mysql://localhost:3306/dev_db</dbUrl>
+                            <dbUsername>dev_user</dbUsername>
+                            <dbPassword>dev_pass</dbPassword>
+                            <packageBase>com.example.dev</packageBase>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        
+        <!-- 测试环境 -->
+        <profile>
+            <id>test</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.easyjava</groupId>
+                        <artifactId>easyjava-maven-plugin</artifactId>
+                        <configuration>
+                            <dbUrl>jdbc:mysql://test-server:3306/test_db</dbUrl>
+                            <dbUsername>test_user</dbUsername>
+                            <dbPassword>test_pass</dbPassword>
+                            <packageBase>com.example.test</packageBase>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+    
+</project>
