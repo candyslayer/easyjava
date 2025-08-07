@@ -152,10 +152,10 @@ public class BuildPo {
 
                 String propName = fieldInfo.getPropertyName();
                 if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, fieldInfo.getSqlType())) {
-                    propName = "DateUtil.Formate("+propName+", DateTimePatternEnum.YYYY_MM_DD_HH_MM_SS.GetPattern())";
+                    propName = "DateUtil.formate("+propName+", DateTimePatternEnum.YYYY_MM_DD_HH_MM_SS.GetPattern())";
 
                 } else if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, fieldInfo.getSqlType())) {
-                    propName= "DateUtil.Formate(" + propName
+                    propName= "DateUtil.formate(" + propName
                             + ", DateTimePatternEnum.YYYY_MM_DD.GetPattern())";
                 }
                 toString.append("\"" + fieldInfo.getComment() + "\"" + " + " + "\" : \"" + " + " + "("

@@ -152,7 +152,7 @@ public class BuildServiceImpl {
                         bw.newLine();
                         bw.write("\t\tparam.setSimplePage(page);");
                         bw.newLine();
-                        bw.write("\t\tList<" + tableInfo.getBeanName() + "> list = this.FindListParam(param);");
+                        bw.write("\t\tList<" + tableInfo.getBeanName() + "> list = this.findListParam(param);");
                         bw.newLine();
                         bw.write("\t\tPaginationResultVO<" + tableInfo.getBeanName()
                                         + "> result = new PaginationResultVO<>(count, page.getPageNo(), page.getPageSize (),\r\n"

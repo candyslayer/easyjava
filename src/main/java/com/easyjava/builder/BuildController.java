@@ -219,8 +219,6 @@ public class BuildController {
             BuildComment.CreateFieldComment(bw, "根据参数删除");
             bw.write("\t@RequestMapping(\"/deleteByParam\")");
             bw.newLine();
-            bw.write("\t@GlobalInterceptor(checkParams = true)");
-            bw.newLine();
             bw.write("\tpublic ResponseVO deleteByParam(" + tableInfo.getBeanParamName() + " param) {");
             bw.newLine();
             if (tableInfo.getEnableSharding() != null && tableInfo.getEnableSharding()) {
@@ -253,11 +251,9 @@ public class BuildController {
             BuildComment.CreateFieldComment(bw, "根据参数更新");
             bw.write("\t@RequestMapping(\"/updateByParam\")");
             bw.newLine();
-            bw.write("\t@GlobalInterceptor(checkParams = true)");
-            bw.newLine();
             bw.write("\tpublic ResponseVO updateByParam(" + tableInfo.getBeanName() + " bean, " + tableInfo.getBeanParamName() + " param) {");
             bw.newLine();
-            bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".updateByParam(bean, param));");
+            bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".updateByParam(bean, param));");
             bw.newLine();
             bw.write("\t}");
             bw.newLine();
@@ -294,7 +290,7 @@ public class BuildController {
                 bw.newLine();
                 bw.write("\tpublic ResponseVO getBy" + methodName + "(" + methodParam + ") {");
                 bw.newLine();
-                bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".getBy" + methodName + "("
+                bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".getBy" + methodName + "("
                         + queryParam + "));");
                 bw.write("\t}");
 
@@ -307,7 +303,7 @@ public class BuildController {
                 bw.write("\tpublic ResponseVO updateBy" + methodName + "(" + beanName + " bean, "
                         + methodParam + ") {");
                 bw.newLine();
-                bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".updateBy" + methodName + "("
+                bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".updateBy" + methodName + "("
                         + "bean, " + queryParam + "));");
                 bw.newLine();
                 bw.write("\t}");
@@ -320,7 +316,7 @@ public class BuildController {
                 bw.newLine();
                 bw.write("\tpublic ResponseVO deleteBy" + methodName + "(" + methodParam + ") {");
                 bw.newLine();
-                bw.write("\t\treturn GetSuccessResponseVO(" + serviceBeanName + ".deleteBy" + methodName + "("
+                bw.write("\t\treturn getSuccessResponseVO(" + serviceBeanName + ".deleteBy" + methodName + "("
                         + queryParam + "));");
                 bw.newLine();
                 bw.write("\t}");
