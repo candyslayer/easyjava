@@ -7,7 +7,7 @@ public enum DateTimePatternEnum {
         this.pattern = pattern;
     }
 
-    public String GetPattern() {
+    public String getPattern() {
         return pattern;
     }
 }
