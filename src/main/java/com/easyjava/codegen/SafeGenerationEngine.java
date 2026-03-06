@@ -24,7 +24,6 @@ public class SafeGenerationEngine {
     private final Path snapshotRoot;
     private final Path tempRoot;
     private final Path mergeResultRoot;
-    private final Path conflictRoot;
     private final CodegenManifestStore manifestStore;
     private final JavaCodeMerger javaMerger = new JavaCodeMerger();
     private final MapperXmlMerger xmlMerger = new MapperXmlMerger();
@@ -39,7 +38,7 @@ public class SafeGenerationEngine {
         this.snapshotRoot = codegenRoot.resolve("snapshots");
         this.tempRoot = codegenRoot.resolve("temp");
         this.mergeResultRoot = codegenRoot.resolve("merge-result");
-        this.conflictRoot = mergeResultRoot.resolve("conflicts");
+        mergeResultRoot.resolve("conflicts");
         this.manifestStore = new CodegenManifestStore(codegenRoot.resolve("manifest.json"));
         this.conflictFileWriter = new ConflictFileWriter(mergeResultRoot);
     }

@@ -276,10 +276,6 @@ public class JavaCodeMerger {
             return new MergeChoice<>(null, List.of(conflict));
         }
 
-        private static <T> MergeChoice<T> conflict(List<ConflictBlock> conflicts) {
-            return new MergeChoice<>(null, conflicts);
-        }
-
         private boolean isConflict() {
             return !conflicts.isEmpty();
         }

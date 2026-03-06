@@ -11,8 +11,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.easyjava.bean.Constants;
-
 /**
  * 配置验证工具类
  * 用于验证代码生成器的各项配置是否正确
