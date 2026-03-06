@@ -2,9 +2,6 @@ package com.easyjava.builder;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +14,8 @@ import com.easyjava.bean.Constants;
 import com.easyjava.bean.DatabaseType;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
+import com.easyjava.codegen.CodegenFileType;
+import com.easyjava.codegen.CodegenWriter;
 import com.easyjava.utils.SqlTypeMapper;
 import com.easyjava.utils.StringUtils;
 
@@ -40,9 +39,8 @@ public class BuildMapperXML {
 
         File mapperXml = new File(folder, tableInfo.getBeanName() + Constants.SUFFIX_MAPPER + ".xml");
 
-        try (OutputStream out = new FileOutputStream(mapperXml);
-                OutputStreamWriter outw = new OutputStreamWriter(out);
-                BufferedWriter bw = new BufferedWriter(outw)) {
+        try {
+            CodegenWriter.write(mapperXml, CodegenFileType.MAPPER_XML, bw -> {
 
             String className = tableInfo.getBeanName() + Constants.SUFFIX_MAPPER;
 
@@ -457,8 +455,8 @@ public class BuildMapperXML {
             bw.newLine();
 
             bw.write("</mapper>");
-            bw.flush();
 
+            });
         } catch (Exception e) {
             log.error("{}的mapper构建失败", tableInfo.getBeanName(), e);
         }

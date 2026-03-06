@@ -2,9 +2,6 @@ package com.easyjava.builder;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import com.easyjava.bean.Constants;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
+import com.easyjava.codegen.CodegenFileType;
+import com.easyjava.codegen.CodegenWriter;
 import com.easyjava.utils.StringUtils;
 
 public class BuildMapper {
@@ -28,9 +27,8 @@ public class BuildMapper {
 
         File mapperFile = new File(folder, tableInfo.getBeanName() + Constants.SUFFIX_MAPPER + ".java");
 
-        try (OutputStream out = new FileOutputStream(mapperFile);
-                OutputStreamWriter outw = new OutputStreamWriter(out);
-                BufferedWriter bw = new BufferedWriter(outw)) {
+        try {
+            CodegenWriter.write(mapperFile, CodegenFileType.JAVA, bw -> {
 
             bw.write("package " + Constants.PACKAGE_MAPPER + ";");
             bw.newLine();
@@ -90,8 +88,7 @@ public class BuildMapper {
             }
 
             bw.write("}");
-            bw.flush();
-
+            });
         } catch (Exception e) {
             log.error("{}的mapper构建失败", tableInfo.getBeanName(), e);
         }

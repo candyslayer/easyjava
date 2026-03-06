@@ -1,14 +1,10 @@
 package com.easyjava.builder;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.easyjava.bean.Constants;
+import com.easyjava.codegen.CodegenFileType;
+import com.easyjava.codegen.CodegenWriter;
 
 public class BuildBase {
 
@@ -119,29 +117,23 @@ public class BuildBase {
         String templatePath = BuildBase.class.getClassLoader().getResource("template/" + fileName + ".txt")
                 .getPath();
 
-        try (OutputStream out = new FileOutputStream(javaFile);
-                OutputStreamWriter outw = new OutputStreamWriter(out, "utf-8");
-                BufferedWriter bw = new BufferedWriter(outw);
-                InputStream in = new FileInputStream(
-                        templatePath);
+        try (InputStream in = new FileInputStream(templatePath);
                 InputStreamReader inr = new InputStreamReader(in);
                 BufferedReader br = new BufferedReader(inr)) {
+            CodegenWriter.write(javaFile, CodegenFileType.JAVA, bw -> {
+                String lineInfo = null;
 
-            String lineInfo = null;
+                for (String head : headInfos) {
+                    bw.write(head + ";");
+                    bw.newLine();
+                    bw.newLine();
+                }
 
-            for (String head : headInfos) {
-                bw.write(head + ";");
-                bw.newLine();
-
-                bw.newLine();
-            }
-
-            while ((lineInfo = br.readLine()) != null) {
-                bw.write(lineInfo);
-                bw.newLine();
-            }
-
-            bw.flush();
+                while ((lineInfo = br.readLine()) != null) {
+                    bw.write(lineInfo);
+                    bw.newLine();
+                }
+            });
 
         } catch (Exception e) {
             log.error("生成基础类 {} 失败", fileName, e);

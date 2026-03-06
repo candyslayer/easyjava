@@ -1,0 +1,231 @@
+package com.easyjava.codegen;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import com.github.javaparser.StaticJavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.ImportDeclaration;
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.body.BodyDeclaration;
+import com.github.javaparser.ast.body.CallableDeclaration;
+import com.github.javaparser.ast.body.ConstructorDeclaration;
+import com.github.javaparser.ast.body.FieldDeclaration;
+import com.github.javaparser.ast.body.InitializerDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
+
+public class JavaCodeMerger {
+
+    private final TextThreeWayMerger textMerger = new TextThreeWayMerger();
+
+    public TextThreeWayMerger.MergeTextResult merge(String baseText, String localText, String newText) {
+        try {
+            CompilationUnit baseCu = parse(baseText);
+            CompilationUnit localCu = parse(localText);
+            CompilationUnit newCu = parse(newText);
+
+            if (baseCu.getTypes().size() != 1 || localCu.getTypes().size() != 1 || newCu.getTypes().size() != 1) {
+                return textMerger.merge(baseText, localText, newText);
+            }
+
+            TypeDeclaration<?> baseType = baseCu.getType(0);
+            TypeDeclaration<?> localType = localCu.getType(0);
+            TypeDeclaration<?> newType = newCu.getType(0);
+
+            List<String> conflicts = new ArrayList<>();
+            TypeDeclaration<?> resultType = newType.clone();
+            resultType.getMembers().clear();
+
+            Map<String, BodyDeclaration<?>> baseMembers = memberMap(baseType);
+            Map<String, BodyDeclaration<?>> localMembers = memberMap(localType);
+            Map<String, BodyDeclaration<?>> newMembers = memberMap(newType);
+
+            List<String> order = new ArrayList<>(newMembers.keySet());
+            for (String key : localMembers.keySet()) {
+                if (!order.contains(key) && !baseMembers.containsKey(key)) {
+                    order.add(key);
+                }
+            }
+
+            for (String key : order) {
+                MergeChoice<BodyDeclaration<?>> memberChoice = mergeMember(baseMembers.get(key), localMembers.get(key),
+                        newMembers.get(key), key);
+                if (memberChoice.isConflict()) {
+                    conflicts.addAll(memberChoice.getConflicts());
+                    continue;
+                }
+                if (memberChoice.getValue() != null) {
+                    resultType.addMember(memberChoice.getValue());
+                }
+            }
+
+            if (!conflicts.isEmpty()) {
+                return textMerger.merge(baseText, localText, newText);
+            }
+
+            CompilationUnit resultCu = new CompilationUnit();
+            newCu.getPackageDeclaration().ifPresent(resultCu::setPackageDeclaration);
+            resultCu.setImports(mergeImports(baseCu, localCu, newCu));
+            resultCu.addType(resultType);
+            return new TextThreeWayMerger.MergeTextResult(resultCu.toString(), conflicts);
+        } catch (Exception e) {
+            return textMerger.merge(baseText, localText, newText);
+        }
+    }
+
+    private CompilationUnit parse(String text) {
+        return StaticJavaParser.parse(text == null || text.isBlank() ? "class Empty {}" : text);
+    }
+
+    private NodeList<ImportDeclaration> mergeImports(CompilationUnit baseCu, CompilationUnit localCu, CompilationUnit newCu) {
+        Set<String> imports = new LinkedHashSet<>();
+        addImports(imports, baseCu);
+        addImports(imports, localCu);
+        addImports(imports, newCu);
+
+        NodeList<ImportDeclaration> result = new NodeList<>();
+        for (String value : imports) {
+            result.add(StaticJavaParser.parseImport(value));
+        }
+        return result;
+    }
+
+    private void addImports(Set<String> imports, CompilationUnit cu) {
+        for (ImportDeclaration declaration : cu.getImports()) {
+            imports.add(declaration.toString().trim());
+        }
+    }
+
+    private MergeChoice<BodyDeclaration<?>> mergeMember(BodyDeclaration<?> baseMember, BodyDeclaration<?> localMember,
+            BodyDeclaration<?> newMember, String key) {
+        String base = stringify(baseMember);
+        String local = stringify(localMember);
+        String newer = stringify(newMember);
+
+        if (equalsText(local, base) && !equalsText(newer, base)) {
+            return MergeChoice.value(cloneOrNull(newMember));
+        }
+        if (!equalsText(local, base) && equalsText(newer, base)) {
+            return MergeChoice.value(cloneOrNull(localMember));
+        }
+        if (equalsText(local, newer)) {
+            return MergeChoice.value(cloneOrNull(localMember));
+        }
+        if (baseMember == null) {
+            if (localMember == null) {
+                return MergeChoice.value(cloneOrNull(newMember));
+            }
+            if (newMember == null) {
+                return MergeChoice.value(cloneOrNull(localMember));
+            }
+            return MergeChoice.conflict("java-member-conflict:" + key);
+        }
+        if (localMember == null || newMember == null) {
+            return MergeChoice.conflict("java-member-delete-conflict:" + key);
+        }
+
+        TextThreeWayMerger.MergeTextResult mergedText = textMerger.merge(base, local, newer);
+        if (mergedText.hasConflict()) {
+            return MergeChoice.conflict(mergedText.getConflicts());
+        }
+        try {
+            return MergeChoice.value(StaticJavaParser.parseBodyDeclaration(mergedText.getMergedText()));
+        } catch (Exception e) {
+            return MergeChoice.conflict("java-member-parse-conflict:" + key);
+        }
+    }
+
+    private Map<String, BodyDeclaration<?>> memberMap(TypeDeclaration<?> type) {
+        Map<String, BodyDeclaration<?>> members = new LinkedHashMap<>();
+        for (BodyDeclaration<?> member : type.getMembers()) {
+            members.put(buildKey(member), member);
+        }
+        return members;
+    }
+
+    private String buildKey(BodyDeclaration<?> member) {
+        if (member instanceof MethodDeclaration method) {
+            return "M:" + signature(method);
+        }
+        if (member instanceof ConstructorDeclaration constructor) {
+            return "C:" + signature(constructor);
+        }
+        if (member instanceof FieldDeclaration field) {
+            StringBuilder builder = new StringBuilder("F:");
+            field.getVariables().forEach(variable -> builder.append(variable.getNameAsString()).append(","));
+            return builder.toString();
+        }
+        if (member instanceof InitializerDeclaration initializer) {
+            return initializer.isStatic() ? "I:static" : "I:instance";
+        }
+        if (member instanceof TypeDeclaration<?> type) {
+            return "T:" + type.getNameAsString();
+        }
+        return member.getClass().getSimpleName() + ":" + member.toString().hashCode();
+    }
+
+    private String signature(CallableDeclaration<?> declaration) {
+        StringBuilder builder = new StringBuilder(declaration.getNameAsString()).append("(");
+        declaration.getParameters().forEach(parameter -> builder.append(parameter.getType()).append(","));
+        builder.append(")");
+        return builder.toString();
+    }
+
+    private boolean equalsText(String left, String right) {
+        return normalize(left).equals(normalize(right));
+    }
+
+    private String normalize(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("\r\n", "\n").replace('\r', '\n').trim();
+    }
+
+    private String stringify(Object value) {
+        return value == null ? "" : value.toString();
+    }
+
+    private BodyDeclaration<?> cloneOrNull(BodyDeclaration<?> member) {
+        return member == null ? null : member.clone();
+    }
+
+    private static class MergeChoice<T> {
+        private final T value;
+        private final List<String> conflicts;
+
+        private MergeChoice(T value, List<String> conflicts) {
+            this.value = value;
+            this.conflicts = conflicts;
+        }
+
+        private static <T> MergeChoice<T> value(T value) {
+            return new MergeChoice<>(value, List.of());
+        }
+
+        private static <T> MergeChoice<T> conflict(String conflict) {
+            return new MergeChoice<>(null, List.of(conflict));
+        }
+
+        private static <T> MergeChoice<T> conflict(List<String> conflicts) {
+            return new MergeChoice<>(null, conflicts);
+        }
+
+        private boolean isConflict() {
+            return !conflicts.isEmpty();
+        }
+
+        private T getValue() {
+            return value;
+        }
+
+        private List<String> getConflicts() {
+            return conflicts;
+        }
+    }
+}

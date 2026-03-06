@@ -2,9 +2,6 @@ package com.easyjava.builder;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import com.easyjava.bean.Constants;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
+import com.easyjava.codegen.CodegenFileType;
+import com.easyjava.codegen.CodegenWriter;
 import com.easyjava.utils.SqlTypeMapper;
 import com.easyjava.utils.StringUtils;
 
@@ -31,9 +30,8 @@ public class BuildQuery {
         File poFile = new File(folder, tableInfo.getBeanName() + Constants.SUFFIX_BEAN_PARAM + ".java");
 
         // 采用这种方式会自动关流
-        try (OutputStream out = new FileOutputStream(poFile);
-                OutputStreamWriter outw = new OutputStreamWriter(out, "utf-8");
-                BufferedWriter bw = new BufferedWriter(outw)) {
+        try {
+            CodegenWriter.write(poFile, CodegenFileType.JAVA, bw -> {
 
             // 构建生成的java类
             bw.write("package " + Constants.PACKAGE_PARAM + ";");
@@ -227,7 +225,7 @@ public class BuildQuery {
             bw.newLine();
             bw.write("}");
 
-            bw.flush();
+            });
         } catch (Exception e) {
             log.error("出现错误", e);
         }

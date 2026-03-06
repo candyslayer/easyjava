@@ -18,6 +18,9 @@ import com.easyjava.builder.BuildServiceImpl;
 import com.easyjava.builder.BuildTest;
 import com.easyjava.builder.BuilderTable;
 import com.easyjava.builder.IncrementalGenerator;
+import com.easyjava.codegen.MergeOutcome;
+import com.easyjava.codegen.MergeStatus;
+import com.easyjava.codegen.SafeGenerationEngine;
 import com.easyjava.manager.DynamicConfigManager;
 import com.easyjava.manager.TemplateCommandTool;
 import com.easyjava.utils.ConfigValidator;
@@ -86,6 +89,7 @@ public class AppEnhanced {
         
         // 配置日志
         LogbackConfig.configureLogback();
+        SafeGenerationEngine.getInstance().prepareRun();
         
         // 1. 配置验证
         log.info("步骤1: 验证配置...");
@@ -149,6 +153,7 @@ public class AppEnhanced {
         }
         
         log.info("=== 代码生成完成 ===");
+        printSafeGenerationSummary();
         printGenerationSummary(tablesToGenerate, options);
     }
     
@@ -283,6 +288,35 @@ public class AppEnhanced {
         log.info("");
         log.info("代码输出目录: {}", PropertiesUtils.geString("path.base"));
         log.info("===============");
+    }
+
+    private static void printSafeGenerationSummary() {
+        int created = 0;
+        int updated = 0;
+        int keptLocal = 0;
+        int autoMerged = 0;
+        int conflicts = 0;
+
+        for (MergeOutcome outcome : SafeGenerationEngine.getInstance().getOutcomes()) {
+            MergeStatus status = outcome.getStatus();
+            if (status == MergeStatus.CREATED) {
+                created++;
+            } else if (status == MergeStatus.UPDATED) {
+                updated++;
+            } else if (status == MergeStatus.KEPT_LOCAL) {
+                keptLocal++;
+            } else if (status == MergeStatus.AUTO_MERGED) {
+                autoMerged++;
+            } else if (status == MergeStatus.CONFLICT) {
+                conflicts++;
+            }
+        }
+
+        log.info("安全再生成摘要: created={}, updated={}, keptLocal={}, autoMerged={}, conflicts={}",
+                created, updated, keptLocal, autoMerged, conflicts);
+        if (conflicts > 0) {
+            log.warn("存在冲突文件，请检查 .codegen/merge-result/ 目录中的候选合并结果");
+        }
     }
     
     /**

@@ -2,6 +2,8 @@ package com.easyjava.builder;
 
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
+import com.easyjava.codegen.CodegenFileType;
+import com.easyjava.codegen.SafeGenerationEngine;
 import com.easyjava.manager.TemplateManager;
 import com.easyjava.manager.TemplateConfigManager;
 import com.easyjava.utils.PropertiesUtils;
@@ -9,9 +11,7 @@ import com.easyjava.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
@@ -368,10 +368,8 @@ public class TemplateBasedBuilder {
         
         File outputFile = new File(outputDir, fileName);
         
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile, false))) {
-            writer.write(content);
-            writer.flush();
-        }
+        SafeGenerationEngine.getInstance().generate(outputFile.toPath(), content,
+                CodegenFileType.fromPath(outputFile.getName()));
     }
     
     /**

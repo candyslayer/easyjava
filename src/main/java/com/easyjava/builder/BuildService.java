@@ -2,9 +2,6 @@ package com.easyjava.builder;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import com.easyjava.bean.Constants;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
+import com.easyjava.codegen.CodegenFileType;
+import com.easyjava.codegen.CodegenWriter;
 import com.easyjava.utils.StringUtils;
 
 public class BuildService {
@@ -29,9 +28,8 @@ public class BuildService {
 
         File serviceFile = new File(folder, tableInfo.getBeanName() + "Service.java");
 
-        try (OutputStream out = new FileOutputStream(serviceFile);
-                OutputStreamWriter outw = new OutputStreamWriter(out);
-                BufferedWriter bw = new BufferedWriter(outw)) {
+        try {
+            CodegenWriter.write(serviceFile, CodegenFileType.JAVA, bw -> {
 
             bw.write("package " + Constants.PACKAGE_SERVICE + ";");
             bw.newLine();
@@ -152,7 +150,7 @@ public class BuildService {
             }
 
             bw.write("}");
-            bw.flush();
+            });
         } catch (Exception e) {
             log.info("{}Service构建失败", tableInfo.getBeanName(), e.getMessage());
         }

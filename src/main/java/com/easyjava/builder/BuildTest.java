@@ -2,9 +2,6 @@ package com.easyjava.builder;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import com.easyjava.bean.Constants;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
+import com.easyjava.codegen.CodegenFileType;
+import com.easyjava.codegen.CodegenWriter;
 import com.easyjava.utils.StringUtils;
 import com.easyjava.utils.PropertiesUtils;
 import com.easyjava.utils.SqlTypeMapper;
@@ -48,9 +47,8 @@ public class BuildTest {
         String testFileName = tableInfo.getBeanName() + "ServiceTest.java";
         File testFile = new File(folder, testFileName);
         
-        try (OutputStream out = new FileOutputStream(testFile);
-             OutputStreamWriter outw = new OutputStreamWriter(out, "utf-8");
-             BufferedWriter bw = new BufferedWriter(outw)) {
+        try {
+            CodegenWriter.write(testFile, CodegenFileType.JAVA, bw -> {
             
             // 包名
             bw.write("package " + Constants.PACKAGE_SERVICE + ";");
@@ -91,10 +89,9 @@ public class BuildTest {
             writeTestDataMethods(bw, tableInfo);
             
             bw.write("}");
-            bw.flush();
             
             log.info("{}ServiceTest生成成功", tableInfo.getBeanName());
-            
+            });
         } catch (Exception e) {
             log.error("{}ServiceTest构建失败", tableInfo.getBeanName(), e);
         }
@@ -119,9 +116,8 @@ public class BuildTest {
         String testFileName = tableInfo.getBeanName() + "ControllerTest.java";
         File testFile = new File(folder, testFileName);
         
-        try (OutputStream out = new FileOutputStream(testFile);
-             OutputStreamWriter outw = new OutputStreamWriter(out, "utf-8");
-             BufferedWriter bw = new BufferedWriter(outw)) {
+        try {
+            CodegenWriter.write(testFile, CodegenFileType.JAVA, bw -> {
             
             // 包名
             bw.write("package " + Constants.PACKAGE_CONTROLLER + ";");
@@ -158,10 +154,9 @@ public class BuildTest {
             writeControllerTestMethods(bw, tableInfo);
             
             bw.write("}");
-            bw.flush();
             
             log.info("{}ControllerTest生成成功", tableInfo.getBeanName());
-            
+            });
         } catch (Exception e) {
             log.error("{}ControllerTest构建失败", tableInfo.getBeanName(), e);
         }

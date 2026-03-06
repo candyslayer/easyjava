@@ -2,9 +2,6 @@ package com.easyjava.builder;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.util.List;
 import java.util.Map;
 
@@ -14,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import com.easyjava.bean.Constants;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
+import com.easyjava.codegen.CodegenFileType;
+import com.easyjava.codegen.CodegenWriter;
 import com.easyjava.utils.StringUtils;
 
 public class BuildController {
@@ -28,10 +27,8 @@ public class BuildController {
 
         File controllerFile = new File(folder, tableInfo.getBeanName() + "Controller.java");
 
-        try (OutputStream out = new FileOutputStream(
-                controllerFile);
-                OutputStreamWriter outw = new OutputStreamWriter(out);
-                BufferedWriter bw = new BufferedWriter(outw)) {
+        try {
+            CodegenWriter.write(controllerFile, CodegenFileType.JAVA, bw -> {
 
             bw.write("package " + Constants.PACKAGE_CONTROLLER + ";");
             bw.newLine();
@@ -216,6 +213,7 @@ public class BuildController {
             bw.newLine();
             bw.write("}");
 
+            });
         } catch (Exception e) {
             log.info("{}Controller创建失败", tableInfo.getBeanName(), e);
         }
