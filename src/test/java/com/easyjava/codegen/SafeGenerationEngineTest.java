@@ -299,4 +299,174 @@ public class SafeGenerationEngineTest {
         assertTrue(resolved.contains("<<<<<<< LOCAL"));
         assertTrue(resolved.contains(">>>>>>> NEW"));
     }
+
+    @Test
+    public void shouldTryMergeWhenBaseSnapshotIsMissing() throws Exception {
+        Path root = Files.createTempDirectory("easyjava-missing-base");
+        SafeGenerationEngine engine = new SafeGenerationEngine(root);
+        engine.prepareRun();
+
+        Path target = root.resolve("src/main/java/demo/UserService.java");
+        String local = """
+                package demo;
+
+                public class UserService {
+                    public String findName() {
+                        return "local";
+                    }
+                }
+                """;
+        String newer = """
+                package demo;
+
+                public class UserService {
+                    public String findName() {
+                        return "local";
+                    }
+
+                    public int count() {
+                        return 2;
+                    }
+                }
+                """;
+
+        Files.createDirectories(target.getParent());
+        Files.writeString(target, local, StandardCharsets.UTF_8);
+
+        MergeOutcome outcome = engine.generate(target, newer, CodegenFileType.JAVA);
+        String merged = Files.readString(target, StandardCharsets.UTF_8);
+        String snapshot = Files.readString(root.resolve(".codegen/snapshots/src/main/java/demo/UserService.java"),
+                StandardCharsets.UTF_8);
+
+        assertEquals(MergeStatus.AUTO_MERGED, outcome.getStatus());
+        assertTrue(merged.contains("return \"local\";"));
+        assertTrue(merged.contains("public int count()"));
+        assertEquals(merged, snapshot);
+    }
+
+    @Test
+    public void shouldNotNestConflictMarkersWhenLocalAlreadyContainsConflict() throws Exception {
+        Path root = Files.createTempDirectory("easyjava-existing-conflict");
+        SafeGenerationEngine engine = new SafeGenerationEngine(root);
+        engine.prepareRun();
+
+        Path target = root.resolve("src/main/java/demo/UserService.java");
+        String local = """
+                package demo;
+
+                public class UserService {
+                    <<<<<<< LOCAL
+                    public String findName() {
+                        return "local";
+                    }
+                    =======
+                    public String findName() {
+                        return "other";
+                    }
+                    >>>>>>> NEW
+                }
+                """;
+        String newer = """
+                package demo;
+
+                public class UserService {
+                    public String findName() {
+                        return "new";
+                    }
+                }
+                """;
+
+        Files.createDirectories(target.getParent());
+        Files.writeString(target, local, StandardCharsets.UTF_8);
+
+        MergeOutcome outcome = engine.generate(target, newer, CodegenFileType.JAVA);
+        String targetAfter = Files.readString(target, StandardCharsets.UTF_8);
+        String conflictCopy = Files.readString(
+                root.resolve(".codegen/merge-result/conflicts/src/main/java/demo/UserService.java"), StandardCharsets.UTF_8);
+
+        assertEquals(MergeStatus.CONFLICT, outcome.getStatus());
+        assertEquals(normalize(local), normalize(targetAfter));
+        assertEquals(normalize(local), normalize(conflictCopy));
+        assertEquals(1, countOccurrences(conflictCopy, "<<<<<<< LOCAL"));
+        assertTrue(outcome.getConflictBlocks().get(0).getReason().contains("避免嵌套冲突"));
+    }
+
+    @Test
+    public void shouldReuseExistingConflictMarkersFromMergeResult() throws Exception {
+        Path root = Files.createTempDirectory("easyjava-merge-marker");
+        SafeGenerationEngine engine = new SafeGenerationEngine(root);
+        engine.prepareRun();
+
+        Path target = root.resolve("src/main/java/demo/UserController.java");
+        String base = """
+                package demo;
+
+                public class UserController {
+                    public String load() {
+                        return "base";
+                    }
+                }
+                """;
+        String local = """
+                package demo;
+
+                public class UserController {
+                    public String load() {
+                        return "local";
+                    }
+                }
+                """;
+        String newer = """
+                package demo;
+
+                public class UserController {
+                    public String load() {
+                        return "new";
+                    }
+                }
+                """;
+
+        engine.generate(target, base, CodegenFileType.JAVA);
+        Files.writeString(target, local, StandardCharsets.UTF_8);
+
+        MergeOutcome outcome = engine.generate(target, newer, CodegenFileType.JAVA);
+
+        assertEquals(MergeStatus.CONFLICT, outcome.getStatus());
+        assertEquals(normalize(outcome.getMergedContent()), normalize(outcome.getConflictMarkedContent()));
+        assertEquals(1, countOccurrences(outcome.getConflictMarkedContent(), "<<<<<<< LOCAL"));
+    }
+
+    @Test
+    public void shouldNotConflictWhenLocalAndNewDifferOnlyByLineEndings() throws Exception {
+        Path root = Files.createTempDirectory("easyjava-equivalent");
+        SafeGenerationEngine engine = new SafeGenerationEngine(root);
+        engine.prepareRun();
+
+        Path target = root.resolve("src/main/resources/demo/sample.txt");
+        String base = "line1\nline2\n";
+        String local = "line1\r\nline2\r\n";
+        String newer = "line1\nline2\n";
+
+        engine.generate(target, base, CodegenFileType.TEXT);
+        Files.writeString(target, local, StandardCharsets.UTF_8);
+
+        MergeOutcome outcome = engine.generate(target, newer, CodegenFileType.TEXT);
+
+        assertEquals(MergeStatus.AUTO_MERGED, outcome.getStatus());
+        assertEquals(normalize(local), normalize(Files.readString(target, StandardCharsets.UTF_8)));
+    }
+
+    private int countOccurrences(String text, String token) {
+        int count = 0;
+        int index = 0;
+        while ((index = text.indexOf(token, index)) >= 0) {
+            count++;
+            index += token.length();
+        }
+        return count;
+    }
+
+    private String normalize(String text) {
+        return text.replace("\r\n", "\n").replace('\r', '\n');
+    }
 }

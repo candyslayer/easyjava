@@ -21,10 +21,19 @@ import com.github.javaparser.ast.body.TypeDeclaration;
 
 public class JavaCodeMerger {
 
+    private static final String CONFLICT_START_MARKER = "<<<<<<<";
+    private static final String CONFLICT_SEPARATOR = "=======";
+    private static final String CONFLICT_END_MARKER = ">>>>>>>";
+    private static final String CONFLICT_REASON_EXISTING_MARKER = "Local 已包含冲突标记，停止再次合并以避免嵌套冲突";
+
     private final TextThreeWayMerger textMerger = new TextThreeWayMerger();
     private final ConflictMarkerRenderer conflictRenderer = new ConflictMarkerRenderer();
 
     public TextThreeWayMerger.MergeTextResult merge(String baseText, String localText, String newText) {
+        String existingConflictText = chooseExistingConflictText(localText, newText);
+        if (existingConflictText != null) {
+            return existingConflictResult(baseText, localText, newText, existingConflictText);
+        }
         try {
             CompilationUnit baseCu = parse(baseText);
             CompilationUnit localCu = parse(localText);
@@ -57,8 +66,7 @@ public class JavaCodeMerger {
                         newMembers.get(key), key);
                 if (memberChoice.isConflict()) {
                     conflicts.addAll(memberChoice.getConflicts());
-                    renderedMembers.add(renderConflict(baseMembers.get(key), localMembers.get(key), newMembers.get(key),
-                            memberChoice.getConflicts().get(0)));
+                    renderedMembers.add(memberChoice.getRenderedText());
                     continue;
                 }
                 if (memberChoice.getValue() != null) {
@@ -69,6 +77,9 @@ public class JavaCodeMerger {
             return new TextThreeWayMerger.MergeTextResult(buildCompilationUnit(baseCu, localCu, newCu, newType, renderedMembers),
                     conflicts);
         } catch (Exception e) {
+            if (existingConflictText != null) {
+                return existingConflictResult(baseText, localText, newText, existingConflictText);
+            }
             return textMerger.merge(baseText, localText, newText);
         }
     }
@@ -101,6 +112,12 @@ public class JavaCodeMerger {
         String base = stringify(baseMember);
         String local = stringify(localMember);
         String newer = stringify(newMember);
+        String existingConflictText = chooseExistingConflictText(local, newer);
+
+        if (existingConflictText != null) {
+            ConflictBlock block = buildConflictBlock(key, baseMember, localMember, newMember, CONFLICT_REASON_EXISTING_MARKER);
+            return MergeChoice.conflict(List.of(block), ensureTrailingLineSeparator(existingConflictText));
+        }
 
         if (equalsText(local, base) && !equalsText(newer, base)) {
             return MergeChoice.value(cloneOrNull(newMember));
@@ -118,24 +135,24 @@ public class JavaCodeMerger {
             if (newMember == null) {
                 return MergeChoice.value(cloneOrNull(localMember));
             }
-            return MergeChoice.conflict(buildConflictBlock(key, baseMember, localMember, newMember,
-                    "Java 成员在 Local 与 New 中同时新增且内容不同"));
+            ConflictBlock block = buildConflictBlock(key, baseMember, localMember, newMember,
+                    "Java 成员在 Local 与 New 中同时新增且内容不同");
+            return MergeChoice.conflict(List.of(block), renderConflict(baseMember, localMember, newMember, block));
         }
         if (localMember == null || newMember == null) {
-            return MergeChoice.conflict(buildConflictBlock(key, baseMember, localMember, newMember,
-                    "Java 成员出现删除/修改冲突"));
+            ConflictBlock block = buildConflictBlock(key, baseMember, localMember, newMember, "Java 成员出现删除/修改冲突");
+            return MergeChoice.conflict(List.of(block), renderConflict(baseMember, localMember, newMember, block));
         }
 
         TextThreeWayMerger.MergeTextResult mergedText = textMerger.merge(base, local, newer);
         if (mergedText.hasConflict()) {
-            return MergeChoice.conflict(buildConflictBlock(key, baseMember, localMember, newMember,
-                    "Java 成员内部代码块冲突"));
+            return MergeChoice.conflict(adaptMemberConflicts(key, mergedText.getConflictBlocks()), mergedText.getMergedText());
         }
         try {
             return MergeChoice.value(StaticJavaParser.parseBodyDeclaration(mergedText.getMergedText()));
         } catch (Exception e) {
-            return MergeChoice.conflict(buildConflictBlock(key, baseMember, localMember, newMember,
-                    "Java 成员自动合并后无法重新解析"));
+            ConflictBlock block = buildConflictBlock(key, baseMember, localMember, newMember, "Java 成员自动合并后无法重新解析");
+            return MergeChoice.conflict(List.of(block), renderConflict(baseMember, localMember, newMember, block));
         }
     }
 
@@ -183,7 +200,35 @@ public class JavaCodeMerger {
         if (text == null) {
             return "";
         }
-        return text.replace("\r\n", "\n").replace('\r', '\n').trim();
+        String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
+        String[] lines = normalized.split("\n", -1);
+        List<String> compacted = new ArrayList<>();
+        boolean lastBlank = false;
+        for (String line : lines) {
+            String trimmedLine = stripTrailingWhitespace(line);
+            if (trimmedLine.isBlank()) {
+                if (!lastBlank) {
+                    compacted.add("");
+                    lastBlank = true;
+                }
+            } else {
+                compacted.add(trimmedLine);
+                lastBlank = false;
+            }
+        }
+
+        int start = 0;
+        int end = compacted.size();
+        while (start < end && compacted.get(start).isEmpty()) {
+            start++;
+        }
+        while (end > start && compacted.get(end - 1).isEmpty()) {
+            end--;
+        }
+        if (start >= end) {
+            return "";
+        }
+        return String.join("\n", compacted.subList(start, end));
     }
 
     private String stringify(Object value) {
@@ -204,6 +249,17 @@ public class JavaCodeMerger {
             ConflictBlock block) {
         String indent = detectIndent(localMember, newMember, baseMember);
         return conflictRenderer.render(block, indent) + System.lineSeparator();
+    }
+
+    private List<ConflictBlock> adaptMemberConflicts(String key, List<ConflictBlock> conflicts) {
+        List<ConflictBlock> result = new ArrayList<>();
+        for (int i = 0; i < conflicts.size(); i++) {
+            ConflictBlock block = conflicts.get(i);
+            String blockId = i == 0 ? key : key + "#" + (i + 1);
+            result.add(new ConflictBlock(blockId, block.getBaseContent(), block.getLocalContent(), block.getNewContent(), "",
+                    CodegenFileType.JAVA, "Java 成员内部代码块冲突"));
+        }
+        return result;
     }
 
     private String detectIndent(BodyDeclaration<?> localMember, BodyDeclaration<?> newMember, BodyDeclaration<?> baseMember) {
@@ -259,21 +315,70 @@ public class JavaCodeMerger {
         return builder.toString();
     }
 
+    private boolean containsConflictMarker(String text) {
+        if (text == null || text.isBlank()) {
+            return false;
+        }
+        String normalized = text.replace("\r\n", "\n").replace('\r', '\n');
+        return normalized.contains(CONFLICT_START_MARKER)
+                && normalized.contains(CONFLICT_SEPARATOR)
+                && normalized.contains(CONFLICT_END_MARKER);
+    }
+
+    private String chooseExistingConflictText(String localText, String newText) {
+        if (containsConflictMarker(localText)) {
+            return safeText(localText);
+        }
+        if (containsConflictMarker(newText)) {
+            return safeText(newText);
+        }
+        return null;
+    }
+
+    private TextThreeWayMerger.MergeTextResult existingConflictResult(String baseText, String localText, String newText,
+            String existingConflictText) {
+        return new TextThreeWayMerger.MergeTextResult(existingConflictText,
+                List.of(new ConflictBlock("java:file-existing-conflict", safeText(baseText), safeText(localText),
+                        safeText(newText), "", CodegenFileType.JAVA, CONFLICT_REASON_EXISTING_MARKER)));
+    }
+
+    private String safeText(String text) {
+        return text == null ? "" : text;
+    }
+
+    private String ensureTrailingLineSeparator(String text) {
+        String value = safeText(text);
+        if (value.isEmpty() || value.endsWith("\n") || value.endsWith("\r")) {
+            return value;
+        }
+        return value + System.lineSeparator();
+    }
+
+    private String stripTrailingWhitespace(String line) {
+        int end = line.length();
+        while (end > 0 && Character.isWhitespace(line.charAt(end - 1))) {
+            end--;
+        }
+        return line.substring(0, end);
+    }
+
     private static class MergeChoice<T> {
         private final T value;
         private final List<ConflictBlock> conflicts;
+        private final String renderedText;
 
-        private MergeChoice(T value, List<ConflictBlock> conflicts) {
+        private MergeChoice(T value, List<ConflictBlock> conflicts, String renderedText) {
             this.value = value;
             this.conflicts = conflicts;
+            this.renderedText = renderedText;
         }
 
         private static <T> MergeChoice<T> value(T value) {
-            return new MergeChoice<>(value, List.of());
+            return new MergeChoice<>(value, List.of(), null);
         }
 
-        private static <T> MergeChoice<T> conflict(ConflictBlock conflict) {
-            return new MergeChoice<>(null, List.of(conflict));
+        private static <T> MergeChoice<T> conflict(List<ConflictBlock> conflicts, String renderedText) {
+            return new MergeChoice<>(null, conflicts, renderedText);
         }
 
         private boolean isConflict() {
@@ -286,6 +391,10 @@ public class JavaCodeMerger {
 
         private List<ConflictBlock> getConflicts() {
             return conflicts;
+        }
+
+        private String getRenderedText() {
+            return renderedText;
         }
     }
 }

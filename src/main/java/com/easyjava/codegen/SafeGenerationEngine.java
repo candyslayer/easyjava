@@ -85,6 +85,9 @@ public class SafeGenerationEngine {
                 updateSnapshot(manifest, relativePath, snapshotFile, fileType, newContent, newContent, MergeStatus.CREATED);
                 outcome = record(MergeOutcome.simple(MergeStatus.CREATED, absoluteTarget, relativePath, fileType, baseContent,
                         null, newContent, newContent));
+            } else if (shouldTreatAsExistingConflict(localContent) && !isEquivalentAfterNormalize(localContent, newContent)) {
+                outcome = recordExistingConflict(manifest, absoluteTarget, relativePath, snapshotFile, mergeFile, fileType,
+                        baseContent, localContent, newContent);
             } else if (baseContent == null) {
                 if (same(localContent, newContent)) {
                     writeFile(mergeFile, localContent);
@@ -93,14 +96,8 @@ public class SafeGenerationEngine {
                     outcome = record(MergeOutcome.simple(MergeStatus.KEPT_LOCAL, absoluteTarget, relativePath, fileType,
                             null, localContent, newContent, localContent));
                 } else {
-                    List<ConflictBlock> blocks = List.of(new ConflictBlock("file:" + relativePath, "", localContent,
-                            newContent, relativePath, fileType, "首次纳入安全生成，缺少 base snapshot，且 Local 与 New 不一致"));
-                    String conflictText = conflictMarkerRenderer.renderConflictFileContent(null, blocks);
-                    writeFile(mergeFile, conflictText);
-                    updateManifest(manifest, relativePath, snapshotFile, fileType, null, localContent,
-                            MergeStatus.CONFLICT);
-                    outcome = record(MergeOutcome.conflict(absoluteTarget, relativePath, fileType, null, localContent,
-                            newContent, null, conflictText, blocks));
+                    outcome = handleMissingBase(manifest, absoluteTarget, relativePath, snapshotFile, mergeFile, fileType,
+                            localContent, newContent);
                 }
             } else if (same(localContent, baseContent) && !same(newContent, baseContent)) {
                 writeFile(absoluteTarget, newContent);
@@ -115,23 +112,37 @@ public class SafeGenerationEngine {
                 outcome = record(MergeOutcome.simple(MergeStatus.KEPT_LOCAL, absoluteTarget, relativePath, fileType,
                         baseContent, localContent, newContent, localContent));
             } else {
-                TextThreeWayMerger.MergeTextResult mergeResult = merge(baseContent, localContent, newContent, fileType);
-                if (mergeResult.hasConflict()) {
-                    writeFile(mergeFile, mergeResult.getMergedText());
-                    updateManifest(manifest, relativePath, snapshotFile, fileType, baseContent, localContent,
-                            MergeStatus.CONFLICT);
-                    String conflictMarkedContent = conflictMarkerRenderer.renderConflictFileContent(mergeResult.getMergedText(),
-                            mergeResult.getConflictBlocks());
-                    outcome = record(MergeOutcome.conflict(absoluteTarget, relativePath, fileType, baseContent, localContent,
-                            newContent, null, conflictMarkedContent,
-                            enrichConflictBlocks(relativePath, fileType, mergeResult.getConflictBlocks())));
-                } else {
-                    writeFile(absoluteTarget, mergeResult.getMergedText());
-                    writeFile(mergeFile, mergeResult.getMergedText());
-                    updateSnapshot(manifest, relativePath, snapshotFile, fileType, newContent,
-                            mergeResult.getMergedText(), MergeStatus.AUTO_MERGED);
+                if (isEquivalentAfterNormalize(localContent, newContent)) {
+                    writeFile(mergeFile, localContent);
+                    updateSnapshot(manifest, relativePath, snapshotFile, fileType, localContent, localContent,
+                            MergeStatus.AUTO_MERGED);
                     outcome = record(MergeOutcome.simple(MergeStatus.AUTO_MERGED, absoluteTarget, relativePath, fileType,
-                            baseContent, localContent, newContent, mergeResult.getMergedText()));
+                            baseContent, localContent, newContent, localContent));
+                }
+                else {
+                    TextThreeWayMerger.MergeTextResult mergeResult = merge(baseContent, localContent, newContent, fileType);
+                    if (mergeResult.hasConflict()) {
+                        MergeOutcome resolvedEquivalent = resolveEquivalentConflict(manifest, absoluteTarget, relativePath,
+                                snapshotFile, mergeFile, fileType, baseContent, localContent, newContent, mergeResult);
+                        if (resolvedEquivalent != null) {
+                            outcome = resolvedEquivalent;
+                        } else {
+                            writeFile(mergeFile, mergeResult.getMergedText());
+                            updateManifest(manifest, relativePath, snapshotFile, fileType, baseContent, localContent,
+                                    MergeStatus.CONFLICT);
+                            String conflictMarkedContent = resolveConflictMarkedContent(mergeResult);
+                            outcome = record(MergeOutcome.conflict(absoluteTarget, relativePath, fileType, baseContent,
+                                    localContent, newContent, mergeResult.getMergedText(), conflictMarkedContent,
+                                    enrichConflictBlocks(relativePath, fileType, mergeResult.getConflictBlocks())));
+                        }
+                    } else {
+                        writeFile(absoluteTarget, mergeResult.getMergedText());
+                        writeFile(mergeFile, mergeResult.getMergedText());
+                        updateSnapshot(manifest, relativePath, snapshotFile, fileType, newContent,
+                                mergeResult.getMergedText(), MergeStatus.AUTO_MERGED);
+                        outcome = record(MergeOutcome.simple(MergeStatus.AUTO_MERGED, absoluteTarget, relativePath, fileType,
+                                baseContent, localContent, newContent, mergeResult.getMergedText()));
+                    }
                 }
             }
 
@@ -192,6 +203,106 @@ public class SafeGenerationEngine {
             result.add(block.withFileContext(relativePath, fileType));
         }
         return result;
+    }
+
+    private MergeOutcome handleMissingBase(CodegenManifest manifest, Path absoluteTarget, String relativePath, Path snapshotFile,
+            Path mergeFile, CodegenFileType fileType, String localContent, String newContent) throws IOException {
+        if (isEquivalentAfterNormalize(localContent, newContent)) {
+            writeFile(mergeFile, localContent);
+            updateSnapshot(manifest, relativePath, snapshotFile, fileType, localContent, localContent,
+                    MergeStatus.KEPT_LOCAL);
+            return record(MergeOutcome.simple(MergeStatus.KEPT_LOCAL, absoluteTarget, relativePath, fileType, null,
+                    localContent, newContent, localContent));
+        }
+
+        TextThreeWayMerger.MergeTextResult mergeResult = tryMergeWithoutBase(localContent, newContent, fileType);
+        if (!mergeResult.hasConflict()) {
+            String mergedText = mergeResult.getMergedText();
+            writeFile(absoluteTarget, mergedText);
+            writeFile(mergeFile, mergedText);
+            updateSnapshot(manifest, relativePath, snapshotFile, fileType, mergedText, mergedText, MergeStatus.AUTO_MERGED);
+            return record(MergeOutcome.simple(MergeStatus.AUTO_MERGED, absoluteTarget, relativePath, fileType, null,
+                    localContent, newContent, mergedText));
+        }
+
+        MergeOutcome resolvedEquivalent = resolveEquivalentConflict(manifest, absoluteTarget, relativePath, snapshotFile,
+                mergeFile, fileType, null, localContent, newContent, mergeResult);
+        if (resolvedEquivalent != null) {
+            return resolvedEquivalent;
+        }
+
+        if (shouldTreatAsExistingConflict(localContent)) {
+            return recordExistingConflict(manifest, absoluteTarget, relativePath, snapshotFile, mergeFile, fileType,
+                    null, localContent, newContent);
+        }
+
+        writeFile(mergeFile, mergeResult.getMergedText());
+        updateManifest(manifest, relativePath, snapshotFile, fileType, null, localContent, MergeStatus.CONFLICT);
+        String conflictMarkedContent = resolveConflictMarkedContent(mergeResult);
+        return record(MergeOutcome.conflict(absoluteTarget, relativePath, fileType, null, localContent, newContent,
+                mergeResult.getMergedText(), conflictMarkedContent,
+                enrichConflictBlocks(relativePath, fileType, mergeResult.getConflictBlocks())));
+    }
+
+    private MergeOutcome recordExistingConflict(CodegenManifest manifest, Path absoluteTarget, String relativePath,
+            Path snapshotFile, Path mergeFile, CodegenFileType fileType, String baseContent, String localContent,
+            String newContent) throws IOException {
+        List<ConflictBlock> blocks = List.of(new ConflictBlock("file:" + relativePath, "", localContent, newContent,
+                relativePath, fileType, "检测到 Local 已包含冲突标记，保留 Local 原状以避免嵌套冲突"));
+        writeFile(mergeFile, localContent);
+        updateManifest(manifest, relativePath, snapshotFile, fileType, baseContent, localContent, MergeStatus.CONFLICT);
+        return record(MergeOutcome.conflict(absoluteTarget, relativePath, fileType, baseContent, localContent, newContent,
+                localContent, localContent, blocks));
+    }
+
+    private TextThreeWayMerger.MergeTextResult tryMergeWithoutBase(String localContent, String newContent,
+            CodegenFileType fileType) {
+        return merge("", localContent, newContent, fileType);
+    }
+
+    private MergeOutcome resolveEquivalentConflict(CodegenManifest manifest, Path absoluteTarget, String relativePath,
+            Path snapshotFile, Path mergeFile, CodegenFileType fileType, String baseContent, String localContent,
+            String newContent, TextThreeWayMerger.MergeTextResult mergeResult) throws IOException {
+        String mergedText = mergeResult.getMergedText();
+        if (isEquivalentAfterNormalize(mergedText, localContent)) {
+            writeFile(mergeFile, localContent);
+            updateSnapshot(manifest, relativePath, snapshotFile, fileType, localContent, localContent,
+                    MergeStatus.AUTO_MERGED);
+            return record(MergeOutcome.simple(MergeStatus.AUTO_MERGED, absoluteTarget, relativePath, fileType, baseContent,
+                    localContent, newContent, localContent));
+        }
+        if (isEquivalentAfterNormalize(mergedText, newContent)) {
+            writeFile(absoluteTarget, newContent);
+            writeFile(mergeFile, newContent);
+            updateSnapshot(manifest, relativePath, snapshotFile, fileType, newContent, newContent,
+                    MergeStatus.AUTO_MERGED);
+            return record(MergeOutcome.simple(MergeStatus.AUTO_MERGED, absoluteTarget, relativePath, fileType, baseContent,
+                    localContent, newContent, newContent));
+        }
+        return null;
+    }
+
+    private String resolveConflictMarkedContent(TextThreeWayMerger.MergeTextResult mergeResult) {
+        String mergedText = mergeResult.getMergedText();
+        if (containsConflictMarkers(mergedText)) {
+            return mergedText;
+        }
+        return conflictMarkerRenderer.renderConflictFileContent(mergedText, mergeResult.getConflictBlocks());
+    }
+
+    private boolean isEquivalentAfterNormalize(String left, String right) {
+        return normalizeForEquivalence(left).equals(normalizeForEquivalence(right));
+    }
+
+    private boolean shouldTreatAsExistingConflict(String text) {
+        return containsConflictMarkers(text);
+    }
+
+    private boolean containsConflictMarkers(String text) {
+        String normalized = normalize(text);
+        return normalized.contains("<<<<<<<")
+                && normalized.contains("=======")
+                && normalized.contains(">>>>>>>");
     }
 
     private void updateSnapshot(CodegenManifest manifest, String relativePath, Path snapshotFile, CodegenFileType fileType,
@@ -280,6 +391,42 @@ public class SafeGenerationEngine {
             return "";
         }
         return value.replace("\r\n", "\n").replace('\r', '\n');
+    }
+
+    private String normalizeForEquivalence(String value) {
+        String normalized = normalize(value);
+        String[] lines = normalized.split("\n", -1);
+        List<String> canonicalLines = new ArrayList<>();
+        boolean previousBlank = false;
+        for (String line : lines) {
+            String trimmedLine = stripTrailingWhitespace(line);
+            if (trimmedLine.isBlank()) {
+                if (!previousBlank) {
+                    canonicalLines.add("");
+                    previousBlank = true;
+                }
+            } else {
+                canonicalLines.add(trimmedLine);
+                previousBlank = false;
+            }
+        }
+        int start = 0;
+        int end = canonicalLines.size();
+        while (start < end && canonicalLines.get(start).isEmpty()) {
+            start++;
+        }
+        while (end > start && canonicalLines.get(end - 1).isEmpty()) {
+            end--;
+        }
+        return String.join("\n", canonicalLines.subList(start, end));
+    }
+
+    private String stripTrailingWhitespace(String line) {
+        int end = line.length();
+        while (end > 0 && Character.isWhitespace(line.charAt(end - 1))) {
+            end--;
+        }
+        return line.substring(0, end);
     }
 
     private String hash(String content) {
