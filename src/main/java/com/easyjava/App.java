@@ -63,6 +63,7 @@ public class App
             BuildController.execute(tableInfo);
         }
         
+        SafeGenerationEngine.getInstance().processConflictsInteractively();
         printSafeGenerationSummary();
         log.info("=== 代码生成完成 ===");
         log.info("提示: 使用 AppEnhanced 获得增量生成、测试代码生成等高级功能");

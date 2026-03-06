@@ -22,6 +22,7 @@ import com.github.javaparser.ast.body.TypeDeclaration;
 public class JavaCodeMerger {
 
     private final TextThreeWayMerger textMerger = new TextThreeWayMerger();
+    private final ConflictMarkerRenderer conflictRenderer = new ConflictMarkerRenderer();
 
     public TextThreeWayMerger.MergeTextResult merge(String baseText, String localText, String newText) {
         try {
@@ -37,9 +38,8 @@ public class JavaCodeMerger {
             TypeDeclaration<?> localType = localCu.getType(0);
             TypeDeclaration<?> newType = newCu.getType(0);
 
-            List<String> conflicts = new ArrayList<>();
-            TypeDeclaration<?> resultType = newType.clone();
-            resultType.getMembers().clear();
+            List<ConflictBlock> conflicts = new ArrayList<>();
+            List<String> renderedMembers = new ArrayList<>();
 
             Map<String, BodyDeclaration<?>> baseMembers = memberMap(baseType);
             Map<String, BodyDeclaration<?>> localMembers = memberMap(localType);
@@ -57,22 +57,17 @@ public class JavaCodeMerger {
                         newMembers.get(key), key);
                 if (memberChoice.isConflict()) {
                     conflicts.addAll(memberChoice.getConflicts());
+                    renderedMembers.add(renderConflict(baseMembers.get(key), localMembers.get(key), newMembers.get(key),
+                            memberChoice.getConflicts().get(0)));
                     continue;
                 }
                 if (memberChoice.getValue() != null) {
-                    resultType.addMember(memberChoice.getValue());
+                    renderedMembers.add(memberChoice.getValue().toString());
                 }
             }
 
-            if (!conflicts.isEmpty()) {
-                return textMerger.merge(baseText, localText, newText);
-            }
-
-            CompilationUnit resultCu = new CompilationUnit();
-            newCu.getPackageDeclaration().ifPresent(resultCu::setPackageDeclaration);
-            resultCu.setImports(mergeImports(baseCu, localCu, newCu));
-            resultCu.addType(resultType);
-            return new TextThreeWayMerger.MergeTextResult(resultCu.toString(), conflicts);
+            return new TextThreeWayMerger.MergeTextResult(buildCompilationUnit(baseCu, localCu, newCu, newType, renderedMembers),
+                    conflicts);
         } catch (Exception e) {
             return textMerger.merge(baseText, localText, newText);
         }
@@ -123,20 +118,24 @@ public class JavaCodeMerger {
             if (newMember == null) {
                 return MergeChoice.value(cloneOrNull(localMember));
             }
-            return MergeChoice.conflict("java-member-conflict:" + key);
+            return MergeChoice.conflict(buildConflictBlock(key, baseMember, localMember, newMember,
+                    "Java 成员在 Local 与 New 中同时新增且内容不同"));
         }
         if (localMember == null || newMember == null) {
-            return MergeChoice.conflict("java-member-delete-conflict:" + key);
+            return MergeChoice.conflict(buildConflictBlock(key, baseMember, localMember, newMember,
+                    "Java 成员出现删除/修改冲突"));
         }
 
         TextThreeWayMerger.MergeTextResult mergedText = textMerger.merge(base, local, newer);
         if (mergedText.hasConflict()) {
-            return MergeChoice.conflict(mergedText.getConflicts());
+            return MergeChoice.conflict(buildConflictBlock(key, baseMember, localMember, newMember,
+                    "Java 成员内部代码块冲突"));
         }
         try {
             return MergeChoice.value(StaticJavaParser.parseBodyDeclaration(mergedText.getMergedText()));
         } catch (Exception e) {
-            return MergeChoice.conflict("java-member-parse-conflict:" + key);
+            return MergeChoice.conflict(buildConflictBlock(key, baseMember, localMember, newMember,
+                    "Java 成员自动合并后无法重新解析"));
         }
     }
 
@@ -150,21 +149,21 @@ public class JavaCodeMerger {
 
     private String buildKey(BodyDeclaration<?> member) {
         if (member instanceof MethodDeclaration method) {
-            return "M:" + signature(method);
+            return "method:" + signature(method);
         }
         if (member instanceof ConstructorDeclaration constructor) {
-            return "C:" + signature(constructor);
+            return "constructor:" + signature(constructor);
         }
         if (member instanceof FieldDeclaration field) {
-            StringBuilder builder = new StringBuilder("F:");
+            StringBuilder builder = new StringBuilder("field:");
             field.getVariables().forEach(variable -> builder.append(variable.getNameAsString()).append(","));
             return builder.toString();
         }
         if (member instanceof InitializerDeclaration initializer) {
-            return initializer.isStatic() ? "I:static" : "I:instance";
+            return initializer.isStatic() ? "initializer:static" : "initializer:instance";
         }
         if (member instanceof TypeDeclaration<?> type) {
-            return "T:" + type.getNameAsString();
+            return "type:" + type.getNameAsString();
         }
         return member.getClass().getSimpleName() + ":" + member.toString().hashCode();
     }
@@ -195,11 +194,76 @@ public class JavaCodeMerger {
         return member == null ? null : member.clone();
     }
 
+    private ConflictBlock buildConflictBlock(String key, BodyDeclaration<?> baseMember, BodyDeclaration<?> localMember,
+            BodyDeclaration<?> newMember, String reason) {
+        return new ConflictBlock(key, stringify(baseMember), stringify(localMember), stringify(newMember), "",
+                CodegenFileType.JAVA, reason);
+    }
+
+    private String renderConflict(BodyDeclaration<?> baseMember, BodyDeclaration<?> localMember, BodyDeclaration<?> newMember,
+            ConflictBlock block) {
+        String indent = detectIndent(localMember, newMember, baseMember);
+        return conflictRenderer.render(block, indent) + System.lineSeparator();
+    }
+
+    private String detectIndent(BodyDeclaration<?> localMember, BodyDeclaration<?> newMember, BodyDeclaration<?> baseMember) {
+        String content = !stringify(localMember).isBlank() ? stringify(localMember)
+                : (!stringify(newMember).isBlank() ? stringify(newMember) : stringify(baseMember));
+        String normalized = content.replace("\r\n", "\n").replace('\r', '\n');
+        int index = normalized.indexOf('\n');
+        if (index < 0 || index + 1 >= normalized.length()) {
+            return "    ";
+        }
+        int cursor = index + 1;
+        StringBuilder indent = new StringBuilder();
+        while (cursor < normalized.length()) {
+            char ch = normalized.charAt(cursor);
+            if (ch == ' ' || ch == '\t') {
+                indent.append(ch);
+                cursor++;
+                continue;
+            }
+            break;
+        }
+        return indent.length() == 0 ? "    " : indent.toString();
+    }
+
+    private String buildCompilationUnit(CompilationUnit baseCu, CompilationUnit localCu, CompilationUnit newCu,
+            TypeDeclaration<?> newType, List<String> renderedMembers) {
+        CompilationUnit resultCu = new CompilationUnit();
+        newCu.getPackageDeclaration().ifPresent(resultCu::setPackageDeclaration);
+        resultCu.setImports(mergeImports(baseCu, localCu, newCu));
+
+        TypeDeclaration<?> skeleton = newType.clone();
+        skeleton.getMembers().clear();
+        String typeText = skeleton.toString();
+        int openBrace = typeText.indexOf('{');
+        int closeBrace = typeText.lastIndexOf('}');
+        StringBuilder builder = new StringBuilder();
+        builder.append(resultCu.toString());
+        if (builder.length() > 0 && !builder.toString().endsWith(System.lineSeparator() + System.lineSeparator())) {
+            builder.append(System.lineSeparator());
+        }
+        builder.append(typeText, 0, openBrace + 1).append(System.lineSeparator()).append(System.lineSeparator());
+        for (String member : renderedMembers) {
+            builder.append(member);
+            if (!member.endsWith(System.lineSeparator())) {
+                builder.append(System.lineSeparator());
+            }
+            builder.append(System.lineSeparator());
+        }
+        builder.append(typeText.substring(closeBrace));
+        if (!builder.toString().endsWith(System.lineSeparator())) {
+            builder.append(System.lineSeparator());
+        }
+        return builder.toString();
+    }
+
     private static class MergeChoice<T> {
         private final T value;
-        private final List<String> conflicts;
+        private final List<ConflictBlock> conflicts;
 
-        private MergeChoice(T value, List<String> conflicts) {
+        private MergeChoice(T value, List<ConflictBlock> conflicts) {
             this.value = value;
             this.conflicts = conflicts;
         }
@@ -208,11 +272,11 @@ public class JavaCodeMerger {
             return new MergeChoice<>(value, List.of());
         }
 
-        private static <T> MergeChoice<T> conflict(String conflict) {
+        private static <T> MergeChoice<T> conflict(ConflictBlock conflict) {
             return new MergeChoice<>(null, List.of(conflict));
         }
 
-        private static <T> MergeChoice<T> conflict(List<String> conflicts) {
+        private static <T> MergeChoice<T> conflict(List<ConflictBlock> conflicts) {
             return new MergeChoice<>(null, conflicts);
         }
 
@@ -224,7 +288,7 @@ public class JavaCodeMerger {
             return value;
         }
 
-        private List<String> getConflicts() {
+        private List<ConflictBlock> getConflicts() {
             return conflicts;
         }
     }

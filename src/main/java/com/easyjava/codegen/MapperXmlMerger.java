@@ -23,6 +23,7 @@ import org.xml.sax.InputSource;
 public class MapperXmlMerger {
 
     private final TextThreeWayMerger textMerger = new TextThreeWayMerger();
+    private final ConflictMarkerRenderer conflictRenderer = new ConflictMarkerRenderer();
 
     public TextThreeWayMerger.MergeTextResult merge(String baseText, String localText, String newText) {
         try {
@@ -34,18 +35,14 @@ public class MapperXmlMerger {
             Element localRoot = localDoc.getDocumentElement();
             Element newRoot = newDoc.getDocumentElement();
 
-            List<String> conflicts = new ArrayList<>();
+            List<ConflictBlock> conflicts = new ArrayList<>();
             String namespace = choose(baseRoot.getAttribute("namespace"), localRoot.getAttribute("namespace"),
                     newRoot.getAttribute("namespace"), conflicts, "xml-namespace-conflict");
-
-            Document resultDoc = parse(newText);
-            Element resultRoot = resultDoc.getDocumentElement();
-            resultRoot.setAttribute("namespace", namespace);
-            clearChildren(resultRoot);
 
             Map<String, Element> baseNodes = childElements(baseRoot);
             Map<String, Element> localNodes = childElements(localRoot);
             Map<String, Element> newNodes = childElements(newRoot);
+            List<String> renderedNodes = new ArrayList<>();
 
             List<String> order = new ArrayList<>(newNodes.keySet());
             for (String key : localNodes.keySet()) {
@@ -55,63 +52,25 @@ public class MapperXmlMerger {
             }
 
             for (String key : order) {
-                Element mergedNode = mergeNode(baseNodes.get(key), localNodes.get(key), newNodes.get(key), key,
-                        conflicts, resultDoc);
-                if (mergedNode != null) {
-                    resultRoot.appendChild(mergedNode);
+                String mergedNode = mergeNode(baseNodes.get(key), localNodes.get(key), newNodes.get(key), key,
+                        conflicts);
+                if (mergedNode != null && !mergedNode.isBlank()) {
+                    renderedNodes.add(mergedNode);
                 }
             }
 
-            return new TextThreeWayMerger.MergeTextResult(toString(resultDoc), conflicts);
+            return new TextThreeWayMerger.MergeTextResult(buildMapperXml(namespace, renderedNodes), conflicts);
         } catch (Exception e) {
             return textMerger.merge(baseText, localText, newText);
         }
     }
 
-    private Element mergeNode(Element baseNode, Element localNode, Element newNode, String key, List<String> conflicts,
-            Document resultDoc) throws Exception {
+    private String mergeNode(Element baseNode, Element localNode, Element newNode, String key, List<ConflictBlock> conflicts)
+            throws Exception {
         String base = serialize(baseNode);
         String local = serialize(localNode);
         String newer = serialize(newNode);
 
-        if (equalsText(local, base) && !equalsText(newer, base)) {
-            return importNode(resultDoc, newNode);
-        }
-        if (!equalsText(local, base) && equalsText(newer, base)) {
-            return importNode(resultDoc, localNode);
-        }
-        if (equalsText(local, newer)) {
-            return importNode(resultDoc, localNode);
-        }
-        if (baseNode == null) {
-            if (localNode == null) {
-                return importNode(resultDoc, newNode);
-            }
-            if (newNode == null) {
-                return importNode(resultDoc, localNode);
-            }
-            conflicts.add("xml-node-conflict:" + key);
-            return importNode(resultDoc, localNode);
-        }
-        if (localNode == null || newNode == null) {
-            conflicts.add("xml-node-delete-conflict:" + key);
-            return importNode(resultDoc, localNode != null ? localNode : newNode);
-        }
-
-        TextThreeWayMerger.MergeTextResult mergedText = textMerger.merge(base, local, newer);
-        if (mergedText.hasConflict()) {
-            conflicts.addAll(mergedText.getConflicts());
-            return importNode(resultDoc, localNode);
-        }
-        Document mergedDoc = parse("<mapper>" + mergedText.getMergedText() + "</mapper>");
-        Node node = mergedDoc.getDocumentElement().getFirstChild();
-        while (node != null && node.getNodeType() != Node.ELEMENT_NODE) {
-            node = node.getNextSibling();
-        }
-        return node == null ? null : (Element) resultDoc.importNode(node, true);
-    }
-
-    private String choose(String base, String local, String newer, List<String> conflicts, String conflictMessage) {
         if (equalsText(local, base) && !equalsText(newer, base)) {
             return newer;
         }
@@ -121,7 +80,44 @@ public class MapperXmlMerger {
         if (equalsText(local, newer)) {
             return local;
         }
-        conflicts.add(conflictMessage);
+        if (baseNode == null) {
+            if (localNode == null) {
+                return newer;
+            }
+            if (newNode == null) {
+                return local;
+            }
+            ConflictBlock conflict = buildConflictBlock(key, base, local, newer, "XML 节点在 Local 与 New 中同时新增且内容不同");
+            conflicts.add(conflict);
+            return renderConflict(conflict);
+        }
+        if (localNode == null || newNode == null) {
+            ConflictBlock conflict = buildConflictBlock(key, base, local, newer, "XML 节点出现删除/修改冲突");
+            conflicts.add(conflict);
+            return renderConflict(conflict);
+        }
+
+        TextThreeWayMerger.MergeTextResult mergedText = textMerger.merge(base, local, newer);
+        if (mergedText.hasConflict()) {
+            ConflictBlock conflict = buildConflictBlock(key, base, local, newer, "XML 节点内部内容冲突");
+            conflicts.add(conflict);
+            return renderConflict(conflict);
+        }
+        return mergedText.getMergedText();
+    }
+
+    private String choose(String base, String local, String newer, List<ConflictBlock> conflicts, String conflictMessage) {
+        if (equalsText(local, base) && !equalsText(newer, base)) {
+            return newer;
+        }
+        if (!equalsText(local, base) && equalsText(newer, base)) {
+            return local;
+        }
+        if (equalsText(local, newer)) {
+            return local;
+        }
+        conflicts.add(new ConflictBlock("mapper:namespace", base, local, newer, "", CodegenFileType.MAPPER_XML,
+                "Mapper namespace 冲突: " + conflictMessage));
         return local;
     }
 
@@ -142,12 +138,6 @@ public class MapperXmlMerger {
         return map;
     }
 
-    private void clearChildren(Element root) {
-        while (root.hasChildNodes()) {
-            root.removeChild(root.getFirstChild());
-        }
-    }
-
     private Document parse(String xml) throws Exception {
         String source = xml;
         if (source == null || source.isBlank()) {
@@ -157,10 +147,6 @@ public class MapperXmlMerger {
         factory.setNamespaceAware(false);
         factory.setIgnoringComments(false);
         return factory.newDocumentBuilder().parse(new InputSource(new StringReader(source)));
-    }
-
-    private Element importNode(Document resultDoc, Element source) {
-        return source == null ? null : (Element) resultDoc.importNode(source, true);
     }
 
     private String serialize(Element element) throws Exception {
@@ -175,15 +161,6 @@ public class MapperXmlMerger {
         return writer.toString();
     }
 
-    private String toString(Document document) throws Exception {
-        Transformer transformer = TransformerFactory.newInstance().newTransformer();
-        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        StringWriter writer = new StringWriter();
-        transformer.transform(new DOMSource(document), new StreamResult(writer));
-        return writer.toString();
-    }
-
     private boolean equalsText(String left, String right) {
         return normalize(left).equals(normalize(right));
     }
@@ -193,5 +170,34 @@ public class MapperXmlMerger {
             return "";
         }
         return text.replace("\r\n", "\n").replace('\r', '\n').trim();
+    }
+
+    private ConflictBlock buildConflictBlock(String key, String base, String local, String newer, String reason) {
+        return new ConflictBlock(key, base, local, newer, "", CodegenFileType.MAPPER_XML, reason);
+    }
+
+    private String renderConflict(ConflictBlock block) {
+        return conflictRenderer.render(block, "    ");
+    }
+
+    private String buildMapperXml(String namespace, List<String> nodes) {
+        String lineSeparator = System.lineSeparator();
+        StringBuilder builder = new StringBuilder();
+        builder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>").append(lineSeparator);
+        builder.append("<mapper namespace=\"").append(namespace == null ? "" : namespace).append("\">")
+                .append(lineSeparator);
+        for (String node : nodes) {
+            String normalized = node.replace("\r\n", "\n").replace('\r', '\n').trim();
+            if (normalized.isEmpty()) {
+                continue;
+            }
+            String[] lines = normalized.split("\n", -1);
+            for (String line : lines) {
+                builder.append("    ").append(line).append(lineSeparator);
+            }
+            builder.append(lineSeparator);
+        }
+        builder.append("</mapper>").append(lineSeparator);
+        return builder.toString();
     }
 }

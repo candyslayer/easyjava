@@ -9,6 +9,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +24,13 @@ public class SafeGenerationEngine {
     private final Path snapshotRoot;
     private final Path tempRoot;
     private final Path mergeResultRoot;
+    private final Path conflictRoot;
     private final CodegenManifestStore manifestStore;
     private final JavaCodeMerger javaMerger = new JavaCodeMerger();
     private final MapperXmlMerger xmlMerger = new MapperXmlMerger();
     private final TextThreeWayMerger textMerger = new TextThreeWayMerger();
+    private final ConflictFileWriter conflictFileWriter;
+    private final ConflictMarkerRenderer conflictMarkerRenderer = new ConflictMarkerRenderer();
     private final List<MergeOutcome> outcomes = new ArrayList<>();
 
     public SafeGenerationEngine(Path projectRoot) {
@@ -35,7 +39,9 @@ public class SafeGenerationEngine {
         this.snapshotRoot = codegenRoot.resolve("snapshots");
         this.tempRoot = codegenRoot.resolve("temp");
         this.mergeResultRoot = codegenRoot.resolve("merge-result");
+        this.conflictRoot = mergeResultRoot.resolve("conflicts");
         this.manifestStore = new CodegenManifestStore(codegenRoot.resolve("manifest.json"));
+        this.conflictFileWriter = new ConflictFileWriter(mergeResultRoot);
     }
 
     public static SafeGenerationEngine getInstance() {
@@ -78,43 +84,55 @@ public class SafeGenerationEngine {
                 writeFile(absoluteTarget, newContent);
                 writeFile(mergeFile, newContent);
                 updateSnapshot(manifest, relativePath, snapshotFile, fileType, newContent, newContent, MergeStatus.CREATED);
-                outcome = record(new MergeOutcome(MergeStatus.CREATED, absoluteTarget));
+                outcome = record(MergeOutcome.simple(MergeStatus.CREATED, absoluteTarget, relativePath, fileType, baseContent,
+                        null, newContent, newContent));
             } else if (baseContent == null) {
                 if (same(localContent, newContent)) {
                     writeFile(mergeFile, localContent);
                     updateSnapshot(manifest, relativePath, snapshotFile, fileType, newContent, localContent,
                             MergeStatus.KEPT_LOCAL);
-                    outcome = record(new MergeOutcome(MergeStatus.KEPT_LOCAL, absoluteTarget));
+                    outcome = record(MergeOutcome.simple(MergeStatus.KEPT_LOCAL, absoluteTarget, relativePath, fileType,
+                            null, localContent, newContent, localContent));
                 } else {
-                    writeFile(mergeFile, newContent);
+                    List<ConflictBlock> blocks = List.of(new ConflictBlock("file:" + relativePath, "", localContent,
+                            newContent, relativePath, fileType, "首次纳入安全生成，缺少 base snapshot，且 Local 与 New 不一致"));
+                    String conflictText = conflictMarkerRenderer.renderConflictFileContent(null, blocks);
+                    writeFile(mergeFile, conflictText);
                     updateManifest(manifest, relativePath, snapshotFile, fileType, null, localContent,
                             MergeStatus.CONFLICT);
-                    outcome = record(new MergeOutcome(MergeStatus.CONFLICT, absoluteTarget,
-                            List.of("bootstrap-conflict:no-base-snapshot")));
+                    outcome = record(MergeOutcome.conflict(absoluteTarget, relativePath, fileType, null, localContent,
+                            newContent, null, conflictText, blocks));
                 }
             } else if (same(localContent, baseContent) && !same(newContent, baseContent)) {
                 writeFile(absoluteTarget, newContent);
                 writeFile(mergeFile, newContent);
                 updateSnapshot(manifest, relativePath, snapshotFile, fileType, newContent, newContent, MergeStatus.UPDATED);
-                outcome = record(new MergeOutcome(MergeStatus.UPDATED, absoluteTarget));
+                outcome = record(MergeOutcome.simple(MergeStatus.UPDATED, absoluteTarget, relativePath, fileType, baseContent,
+                        localContent, newContent, newContent));
             } else if (!same(localContent, baseContent) && same(newContent, baseContent)) {
                 writeFile(mergeFile, localContent);
                 updateManifest(manifest, relativePath, snapshotFile, fileType, baseContent, localContent,
                         MergeStatus.KEPT_LOCAL);
-                outcome = record(new MergeOutcome(MergeStatus.KEPT_LOCAL, absoluteTarget));
+                outcome = record(MergeOutcome.simple(MergeStatus.KEPT_LOCAL, absoluteTarget, relativePath, fileType,
+                        baseContent, localContent, newContent, localContent));
             } else {
                 TextThreeWayMerger.MergeTextResult mergeResult = merge(baseContent, localContent, newContent, fileType);
                 if (mergeResult.hasConflict()) {
                     writeFile(mergeFile, mergeResult.getMergedText());
                     updateManifest(manifest, relativePath, snapshotFile, fileType, baseContent, localContent,
                             MergeStatus.CONFLICT);
-                    outcome = record(new MergeOutcome(MergeStatus.CONFLICT, absoluteTarget, mergeResult.getConflicts()));
+                    String conflictMarkedContent = conflictMarkerRenderer.renderConflictFileContent(mergeResult.getMergedText(),
+                            mergeResult.getConflictBlocks());
+                    outcome = record(MergeOutcome.conflict(absoluteTarget, relativePath, fileType, baseContent, localContent,
+                            newContent, null, conflictMarkedContent,
+                            enrichConflictBlocks(relativePath, fileType, mergeResult.getConflictBlocks())));
                 } else {
                     writeFile(absoluteTarget, mergeResult.getMergedText());
                     writeFile(mergeFile, mergeResult.getMergedText());
                     updateSnapshot(manifest, relativePath, snapshotFile, fileType, newContent,
                             mergeResult.getMergedText(), MergeStatus.AUTO_MERGED);
-                    outcome = record(new MergeOutcome(MergeStatus.AUTO_MERGED, absoluteTarget));
+                    outcome = record(MergeOutcome.simple(MergeStatus.AUTO_MERGED, absoluteTarget, relativePath, fileType,
+                            baseContent, localContent, newContent, mergeResult.getMergedText()));
                 }
             }
 
@@ -129,9 +147,26 @@ public class SafeGenerationEngine {
         return new ArrayList<>(outcomes);
     }
 
+    public synchronized void processConflictsInteractively() {
+        List<MergeOutcome> conflicts = outcomes.stream()
+                .filter(outcome -> outcome.getStatus() == MergeStatus.CONFLICT)
+                .collect(Collectors.toList());
+        if (conflicts.isEmpty()) {
+            return;
+        }
+
+        ConsoleConflictResolver resolver = new ConsoleConflictResolver(System.in, System.out);
+        for (MergeOutcome outcome : conflicts) {
+            ConflictResolutionChoice choice = resolver.resolve(outcome);
+            outcome.setResolutionChoice(choice);
+            applyConflictChoice(outcome, choice);
+        }
+    }
+
     private MergeOutcome record(MergeOutcome outcome) {
         outcomes.add(outcome);
-        if (outcome.getStatus() == MergeStatus.CONFLICT) {
+        if (outcome.hasConflict()) {
+            persistConflictArtifacts(outcome);
             log.warn("检测到冲突: {}", toRelativePath(outcome.getTargetPath()));
         } else {
             log.info("安全生成 {} -> {}", outcome.getStatus(), toRelativePath(outcome.getTargetPath()));
@@ -149,6 +184,15 @@ public class SafeGenerationEngine {
             case MAPPER_XML -> xmlMerger.merge(safeBase, safeLocal, safeNew);
             case TEXT -> textMerger.merge(safeBase, safeLocal, safeNew);
         };
+    }
+
+    private List<ConflictBlock> enrichConflictBlocks(String relativePath, CodegenFileType fileType,
+            List<ConflictBlock> conflictBlocks) {
+        List<ConflictBlock> result = new ArrayList<>();
+        for (ConflictBlock block : conflictBlocks) {
+            result.add(block.withFileContext(relativePath, fileType));
+        }
+        return result;
     }
 
     private void updateSnapshot(CodegenManifest manifest, String relativePath, Path snapshotFile, CodegenFileType fileType,
@@ -173,6 +217,59 @@ public class SafeGenerationEngine {
     private void writeFile(Path path, String content) throws IOException {
         Files.createDirectories(path.getParent());
         Files.writeString(path, content == null ? "" : content, StandardCharsets.UTF_8);
+    }
+
+    private void persistConflictArtifacts(MergeOutcome outcome) {
+        try {
+            conflictFileWriter.writeConflictFile(outcome);
+            conflictFileWriter.writeReport(outcomes);
+        } catch (IOException e) {
+            throw new IllegalStateException("写出冲突文件失败: " + outcome.getRelativePath(), e);
+        }
+    }
+
+    private void applyConflictChoice(MergeOutcome outcome, ConflictResolutionChoice choice) {
+        try {
+            switch (choice) {
+                case USE_NEW:
+                    applyNewVersion(outcome);
+                    System.out.println("已覆盖生成目录文件为 New: " + outcome.getRelativePath());
+                    break;
+                case KEEP_LOCAL:
+                    System.out.println("已保留生成目录中的 Local 文件: " + outcome.getRelativePath());
+                    break;
+                case WRITE_CONFLICT_TO_TARGET:
+                    applyConflictMarkedVersion(outcome);
+                    System.out.println("已用冲突标记内容覆盖生成目录文件: " + outcome.getRelativePath());
+                    break;
+                case KEEP_CONFLICT_COPY_ONLY:
+                    System.out.println("目标文件未修改，已保留冲突文件供手工处理: " + outcome.getConflictOutputPath());
+                    break;
+                case SKIP:
+                    System.out.println("已跳过: " + outcome.getRelativePath());
+                    break;
+                default:
+                    break;
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("处理冲突文件失败: " + outcome.getRelativePath(), e);
+        }
+    }
+
+    private void applyNewVersion(MergeOutcome outcome) throws IOException {
+        writeFile(outcome.getTargetPath(), outcome.getNewContent());
+        writeFile(mergeResultRoot.resolve(outcome.getRelativePath()), outcome.getNewContent());
+        Path snapshotFile = snapshotRoot.resolve(outcome.getRelativePath());
+        CodegenManifest manifest = manifestStore.load();
+        updateSnapshot(manifest, outcome.getRelativePath(), snapshotFile, outcome.getFileType(), outcome.getNewContent(),
+                outcome.getNewContent(), MergeStatus.UPDATED);
+        manifestStore.save(manifest);
+    }
+
+    private void applyConflictMarkedVersion(MergeOutcome outcome) throws IOException {
+        String conflictMarkedContent = outcome.getConflictMarkedContent();
+        writeFile(outcome.getTargetPath(), conflictMarkedContent);
+        writeFile(mergeResultRoot.resolve(outcome.getRelativePath()), conflictMarkedContent);
     }
 
     private boolean same(String left, String right) {

@@ -153,6 +153,7 @@ public class AppEnhanced {
         }
         
         log.info("=== 代码生成完成 ===");
+        SafeGenerationEngine.getInstance().processConflictsInteractively();
         printSafeGenerationSummary();
         printGenerationSummary(tablesToGenerate, options);
     }
@@ -315,7 +316,7 @@ public class AppEnhanced {
         log.info("安全再生成摘要: created={}, updated={}, keptLocal={}, autoMerged={}, conflicts={}",
                 created, updated, keptLocal, autoMerged, conflicts);
         if (conflicts > 0) {
-            log.warn("存在冲突文件，请检查 .codegen/merge-result/ 目录中的候选合并结果");
+            log.warn("存在冲突文件，请检查 .codegen/merge-result/conflicts/ 与 .codegen/merge-result/conflict-report.txt");
         }
     }
     

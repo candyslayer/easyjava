@@ -26,7 +26,7 @@ public class TextThreeWayMerger {
         anchors.add(base.size());
 
         List<String> merged = new ArrayList<>();
-        List<String> conflicts = new ArrayList<>();
+        List<ConflictBlock> conflicts = new ArrayList<>();
         int localCursor = 0;
         int newCursor = 0;
 
@@ -57,7 +57,8 @@ public class TextThreeWayMerger {
             } else if (localSegment.equals(newSegment)) {
                 merged.addAll(localSegment);
             } else {
-                conflicts.add("text-conflict@" + baseStart);
+                conflicts.add(new ConflictBlock("text:block@" + baseStart, joinLines(baseSegment), joinLines(localSegment),
+                        joinLines(newSegment), "", CodegenFileType.TEXT, "文本块在 Local 与 New 中都发生了变更"));
                 merged.add("<<<<<<< LOCAL");
                 merged.addAll(localSegment);
                 merged.add("=======");
@@ -138,23 +139,31 @@ public class TextThreeWayMerger {
 
     public static class MergeTextResult {
         private final String mergedText;
-        private final List<String> conflicts;
+        private final List<ConflictBlock> conflictBlocks;
 
-        public MergeTextResult(String mergedText, List<String> conflicts) {
+        public MergeTextResult(String mergedText, List<ConflictBlock> conflictBlocks) {
             this.mergedText = mergedText;
-            this.conflicts = conflicts;
+            this.conflictBlocks = conflictBlocks;
         }
 
         public String getMergedText() {
             return mergedText;
         }
 
+        public List<ConflictBlock> getConflictBlocks() {
+            return conflictBlocks;
+        }
+
         public List<String> getConflicts() {
+            List<String> conflicts = new ArrayList<>();
+            for (ConflictBlock block : conflictBlocks) {
+                conflicts.add(block.getBlockId());
+            }
             return conflicts;
         }
 
         public boolean hasConflict() {
-            return !conflicts.isEmpty();
+            return !conflictBlocks.isEmpty();
         }
     }
 
