@@ -210,6 +210,10 @@ public class SqlTypeMapper {
     public static String getDefaultValue(String sqlType) {
         return getJavaTypeInfo(sqlType).getDefaultValue();
     }
+
+    public static String getBaseType(String sqlType) {
+        return extractBaseType(sqlType);
+    }
     
     /**
      * 提取基础类型名（去除参数）
@@ -315,6 +319,17 @@ public class SqlTypeMapper {
         String baseType = extractBaseType(sqlType).toLowerCase();
         return ArrayUtils.contains(Constants.SQL_DATE_TYPE, baseType) ||
                ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, baseType) ||
+               ArrayUtils.contains(Constants.SQL_TIME_TYPE, baseType);
+    }
+
+    public static boolean isDateOnlyType(String sqlType) {
+        String baseType = extractBaseType(sqlType).toLowerCase();
+        return ArrayUtils.contains(Constants.SQL_DATE_TYPE, baseType);
+    }
+
+    public static boolean isDateTimeWithTimeType(String sqlType) {
+        String baseType = extractBaseType(sqlType).toLowerCase();
+        return ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, baseType) ||
                ArrayUtils.contains(Constants.SQL_TIME_TYPE, baseType);
     }
     

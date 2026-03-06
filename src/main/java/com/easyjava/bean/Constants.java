@@ -123,7 +123,7 @@ public class Constants {
     
     // 日期时间类型
     public final static String[] SQL_DATE_TIME_TYPES = new String[] { 
-        "datetime", "timestamp", "timestamp with time zone", "timestamptz" 
+        "datetime", "timestamp", "timestamp without time zone", "timestamp with time zone", "timestamptz" 
     };
 
     // 日期类型
@@ -131,7 +131,7 @@ public class Constants {
     
     // 时间类型
     public final static String[] SQL_TIME_TYPE = new String[] { 
-        "time", "time with time zone", "timetz" 
+        "time", "time without time zone", "time with time zone", "timetz" 
     };
 
     // 布尔类型

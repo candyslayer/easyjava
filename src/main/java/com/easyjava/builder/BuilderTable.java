@@ -1,137 +1,58 @@
 package com.easyjava.builder;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.easyjava.bean.Constants;
+import com.easyjava.bean.DatabaseType;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
-import com.easyjava.utils.JsonUtils;
-import com.easyjava.utils.PropertiesUtils;
-import com.easyjava.utils.StringUtils;
+import com.easyjava.utils.ConfigUtils;
 import com.easyjava.utils.SqlTypeMapper;
+import com.easyjava.utils.StringUtils;
 
 public class BuilderTable {
 
     private final static Logger log = LoggerFactory.getLogger(BuilderTable.class);
 
-    private static Connection conn = null;
-
-    private static String SQL_SHOW_TABLES_STATUS = "show table status";
-    private static String SQL_SHOW_TABLE_FIELDS = "show full fields from %s";
-    private static String SQL_SHOW_TABLE_INDEX = "show index from %s";
-    static {
-        String driverName = PropertiesUtils.geString("spring.datasource.driver-class-name");
-        String url = PropertiesUtils.geString("spring.datasource.url");
-        String user = PropertiesUtils.geString("spring.datasource.username");
-        String password = PropertiesUtils.geString("spring.datasource.password");
-
-        try {
-            Class.forName(driverName);
-
-            conn = DriverManager.getConnection(url, user, password);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-    }
-
     public static List<TableInfo> GetTables() {
-        PreparedStatement ps = null;
-        ResultSet tableResult = null;
-
         List<TableInfo> tableInfos = new ArrayList<>();
 
-        try {
-            ps = conn.prepareStatement(SQL_SHOW_TABLES_STATUS);
-            tableResult = ps.executeQuery();
+        try (Connection conn = createConnection()) {
+            DatabaseType databaseType = DatabaseType.fromConnection(conn);
+            String schemaName = resolveSchema(conn, databaseType);
 
-            while (tableResult.next()) {
-                String tableName = tableResult.getString("name");
-                String comment = tableResult.getString("comment");
-
-                TableInfo tableInfo = new TableInfo();
-
-                String beanName = tableName;
-
-                if (Constants.IGNORE_TABLE_PREFIX) {
-                    beanName = tableName.substring(beanName.indexOf("_") + 1);
-                }
-
-                beanName = ProcessField(tableName, true);
-
-                tableInfo.setTableName(tableName);
-                tableInfo.setComment(comment);
-                tableInfo.setBeanName(beanName);
-                tableInfo.setBeanParamName(beanName + ProcessField(Constants.SUFFIX_BEAN_PARAM, true));
-
-                // 初始化haveDate和haveDateTime属性
-                tableInfo.setHaveDate(false);
-                tableInfo.setHaveDateTime(false);
-
-                tableInfo.setFieldList(ReadFieldInfo(tableInfo));
-
-                GetKeyIndexInfo(tableInfo);
-
+            for (TableMeta tableMeta : loadTableMetas(conn, databaseType, schemaName)) {
+                TableInfo tableInfo = buildTableInfo(tableMeta.tableName, tableMeta.comment);
+                tableInfo.setFieldList(ReadFieldInfo(conn, databaseType, schemaName, tableInfo));
+                GetKeyIndexInfo(conn, databaseType, schemaName, tableInfo);
                 tableInfos.add(tableInfo);
             }
-
-            log.info(JsonUtils.convertObject2Json(tableInfos));
         } catch (Exception e) {
             log.error("获取表异常", e);
-        } finally {
-            if (tableResult != null) {
-                try {
-                    tableResult.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (conn != null) {
-                try {
-                    conn.close();
-                } catch (Exception e) {
-
-                }
-            }
         }
 
         return tableInfos;
     }
 
-    private static List<FieldInfo> ReadFieldInfo(TableInfo tableInfo) {
-        PreparedStatement ps = null;
-        ResultSet fieldResult = null;
-
+    private static List<FieldInfo> ReadFieldInfo(Connection conn, DatabaseType databaseType, String schemaName,
+            TableInfo tableInfo) {
         List<FieldInfo> fieldInfos = new ArrayList<>();
-
-        // 添加扩展字段，这是做扩展表的时候临时添加的字段，会直接用tableInfo设置扩展表，但是之前用的是这个函数的返回值添加，感觉不太规范
         List<FieldInfo> fieldExtendList = new ArrayList<>();
 
-        try {
-            ps = conn.prepareStatement(String.format(SQL_SHOW_TABLE_FIELDS, tableInfo.getTableName()));
-            fieldResult = ps.executeQuery();
-
+        try (PreparedStatement ps = createFieldStatement(conn, databaseType, schemaName, tableInfo.getTableName());
+                ResultSet fieldResult = ps.executeQuery()) {
             while (fieldResult.next()) {
                 String field = fieldResult.getString("field");
                 String type = fieldResult.getString("type");
@@ -139,57 +60,41 @@ public class BuilderTable {
                 String comment = fieldResult.getString("comment");
 
                 String propertyName = ProcessField(field, false);
+                String baseType = SqlTypeMapper.getBaseType(type);
 
                 FieldInfo fieldInfo = new FieldInfo();
-
-                if (type.indexOf("(") > 0) {
-                    type = type.substring(0, type.indexOf("("));
-                }
-
                 fieldInfo.setFieldName(field);
                 fieldInfo.setPropertyName(propertyName);
-                fieldInfo.setSqlType(type);
+                fieldInfo.setSqlType(baseType);
                 fieldInfo.setComment(comment);
-                fieldInfo.setIsAutoIncrement("auto_increment".equalsIgnoreCase(extra) ? true : false);
-                fieldInfo.setJavaType(ProcessJavaType(type));
+                fieldInfo.setIsAutoIncrement("auto_increment".equalsIgnoreCase(extra));
+                fieldInfo.setJavaType(ProcessJavaType(baseType));
 
-                // 使用新的类型检查方法
-                if (SqlTypeMapper.isDateTimeType(type)) {
-                    if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, type)) {
+                if (SqlTypeMapper.isDateTimeType(baseType)) {
+                    if (SqlTypeMapper.isDateTimeWithTimeType(baseType)) {
                         tableInfo.setHaveDateTime(true);
                     }
-                    if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)) {
+                    if (SqlTypeMapper.isDateOnlyType(baseType)) {
                         tableInfo.setHaveDate(true);
                     }
                 }
 
-                if (SqlTypeMapper.isNumericType(type) && 
-                    ArrayUtils.contains(Constants.SQL_DECIMAL_TYPE, type)) {
+                if ("BigDecimal".equals(SqlTypeMapper.getJavaType(baseType))) {
                     tableInfo.setHaveBigDecimal(true);
                 }
 
-                // 后面添加的扩展表字段判断
-                if (SqlTypeMapper.isStringType(type)) {
+                if (SqlTypeMapper.isStringType(baseType)) {
                     fieldExtendList.add(new FieldInfo(field, propertyName + Constants.SUFFIX_BEAN_PARAM_FUZZY,
-                            type, ProcessJavaType(type), comment,
-                            "auto_increment".equalsIgnoreCase(extra) ? true : false));
-                }
-
-                else if (SqlTypeMapper.isDateTimeType(type)) {
-
-                    // 添加date类
-                    // fieldExtendList.add(new FieldInfo(field, propertyName,
-                    // type, ProcessJavaType(type), comment,
-                    // "auto_increment".equalsIgnoreCase(extra) ? true : false));
-
+                            baseType, ProcessJavaType(baseType), comment,
+                            "auto_increment".equalsIgnoreCase(extra)));
+                } else if (SqlTypeMapper.isDateTimeType(baseType)) {
                     fieldExtendList.add(new FieldInfo(field, propertyName + Constants.SUFFIX_BEAN_PARAM_TIME_START,
-                            type, "String", comment,
-                            "auto_increment".equalsIgnoreCase(extra) ? true : false));
+                            baseType, "String", comment,
+                            "auto_increment".equalsIgnoreCase(extra)));
 
                     fieldExtendList.add(new FieldInfo(field, propertyName + Constants.SUFFIX_BEAN_PARAM_TIME_END,
-                            type,
-                            "String", comment,
-                            "auto_increment".equalsIgnoreCase(extra) ? true : false));
+                            baseType, "String", comment,
+                            "auto_increment".equalsIgnoreCase(extra)));
                 }
 
                 fieldInfos.add(fieldInfo);
@@ -197,46 +102,24 @@ public class BuilderTable {
 
             tableInfo.setFieldListExtend(fieldExtendList);
         } catch (Exception e) {
-            log.error("获取表异常", e);
-        } finally {
-            if (fieldResult != null) {
-                try {
-                    fieldResult.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+            log.error("获取表字段异常", e);
         }
 
         return fieldInfos;
     }
 
-    private static void GetKeyIndexInfo(TableInfo tableInfo) {
-        PreparedStatement ps = null;
-        ResultSet fieldResult = null;
-
-        // 清空旧的索引信息
+    private static void GetKeyIndexInfo(Connection conn, DatabaseType databaseType, String schemaName,
+            TableInfo tableInfo) {
         tableInfo.getKeyIndexMap().clear();
 
-        try {
-            ps = conn.prepareStatement(String.format(SQL_SHOW_TABLE_INDEX, tableInfo.getTableName()));
-            fieldResult = ps.executeQuery();
-
+        try (PreparedStatement ps = createIndexStatement(conn, databaseType, schemaName, tableInfo.getTableName());
+                ResultSet fieldResult = ps.executeQuery()) {
             Map<String, FieldInfo> tempMap = new HashMap<>();
             for (FieldInfo fieldInfo : tableInfo.getFieldList()) {
                 tempMap.put(fieldInfo.getFieldName(), fieldInfo);
             }
 
-            // 临时存储索引字段及其顺序
-            Map<String, List<FieldInfoWithOrder>> indexFieldOrderMap = new HashMap<>();
+            Map<String, List<FieldInfoWithOrder>> indexFieldOrderMap = new LinkedHashMap<>();
 
             while (fieldResult.next()) {
                 String keyName = fieldResult.getString("key_name");
@@ -248,50 +131,168 @@ public class BuilderTable {
                     continue;
                 }
 
-                // 跳过时间类型字段
-                String type = field.getSqlType();
-                if (SqlTypeMapper.isDateTimeType(type)) {
+                if (SqlTypeMapper.isDateTimeType(field.getSqlType())) {
                     continue;
                 }
 
-                List<FieldInfoWithOrder> fieldList = indexFieldOrderMap.computeIfAbsent(keyName, k -> new ArrayList<>());
+                List<FieldInfoWithOrder> fieldList = indexFieldOrderMap.computeIfAbsent(keyName,
+                        k -> new ArrayList<>());
                 fieldList.add(new FieldInfoWithOrder(field, seqInIndex));
             }
 
-            // 按顺序填充到 keyIndexMap
             for (Map.Entry<String, List<FieldInfoWithOrder>> entry : indexFieldOrderMap.entrySet()) {
                 List<FieldInfoWithOrder> list = entry.getValue();
                 list.sort((a, b) -> Integer.compare(a.seq, b.seq));
                 List<FieldInfo> sortedFields = new ArrayList<>();
-                for (FieldInfoWithOrder f : list) {
-                    sortedFields.add(f.fieldInfo);
+                for (FieldInfoWithOrder fieldInfoWithOrder : list) {
+                    sortedFields.add(fieldInfoWithOrder.fieldInfo);
                 }
                 tableInfo.getKeyIndexMap().put(entry.getKey(), sortedFields);
             }
 
         } catch (Exception e) {
-            log.error("获取表异常", e);
-        } finally {
-            if (fieldResult != null) {
-                try {
-                    fieldResult.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
+            log.error("获取索引异常", e);
+        }
+    }
+
+    private static Connection createConnection() throws Exception {
+        String driverName = ConfigUtils.Database.getDriverClassName();
+        String url = ConfigUtils.Database.getUrl();
+        String user = ConfigUtils.Database.getUsername();
+        String password = ConfigUtils.Database.getPassword();
+        Class.forName(driverName);
+        return DriverManager.getConnection(url, user, password);
+    }
+
+    private static TableInfo buildTableInfo(String tableName, String comment) {
+        TableInfo tableInfo = new TableInfo();
+
+        String beanSourceName = tableName;
+        if (Constants.IGNORE_TABLE_PREFIX && beanSourceName.contains("_")) {
+            beanSourceName = beanSourceName.substring(beanSourceName.indexOf("_") + 1);
+        }
+        String beanName = ProcessField(beanSourceName, true);
+
+        tableInfo.setTableName(tableName);
+        tableInfo.setComment(comment);
+        tableInfo.setBeanName(beanName);
+        tableInfo.setBeanParamName(beanName + ProcessField(Constants.SUFFIX_BEAN_PARAM, true));
+        tableInfo.setHaveDate(false);
+        tableInfo.setHaveDateTime(false);
+        tableInfo.setHaveBigDecimal(false);
+        return tableInfo;
+    }
+
+    private static List<TableMeta> loadTableMetas(Connection conn, DatabaseType databaseType, String schemaName)
+            throws Exception {
+        List<TableMeta> tables = new ArrayList<>();
+        String sql;
+        if (databaseType.isPostgreSql()) {
+            sql = "select c.relname as name, coalesce(obj_description(c.oid, 'pg_class'), '') as comment "
+                    + "from pg_class c "
+                    + "join pg_namespace n on n.oid = c.relnamespace "
+                    + "where c.relkind = 'r' and n.nspname = ? order by c.relname";
+        } else {
+            sql = "show table status";
+        }
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (databaseType.isPostgreSql()) {
+                ps.setString(1, schemaName);
+            }
+            try (ResultSet tableResult = ps.executeQuery()) {
+                while (tableResult.next()) {
+                    tables.add(new TableMeta(tableResult.getString("name"), tableResult.getString("comment")));
                 }
             }
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
+        }
+
+        return tables;
+    }
+
+    private static PreparedStatement createFieldStatement(Connection conn, DatabaseType databaseType, String schemaName,
+            String tableName) throws Exception {
+        if (databaseType.isPostgreSql()) {
+            String sql = "select a.attname as field, format_type(a.atttypid, a.atttypmod) as type, "
+                    + "case when a.attidentity in ('a','d') then 'auto_increment' "
+                    + "when pg_get_expr(ad.adbin, ad.adrelid) like 'nextval(%' then 'auto_increment' else '' end as extra, "
+                    + "coalesce(col_description(a.attrelid, a.attnum), '') as comment "
+                    + "from pg_attribute a "
+                    + "join pg_class c on a.attrelid = c.oid "
+                    + "join pg_namespace n on c.relnamespace = n.oid "
+                    + "left join pg_attrdef ad on a.attrelid = ad.adrelid and a.attnum = ad.adnum "
+                    + "where c.relname = ? and n.nspname = ? and a.attnum > 0 and not a.attisdropped "
+                    + "order by a.attnum";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, tableName);
+            ps.setString(2, schemaName);
+            return ps;
+        }
+
+        return conn.prepareStatement(String.format("show full fields from %s", tableName));
+    }
+
+    private static PreparedStatement createIndexStatement(Connection conn, DatabaseType databaseType, String schemaName,
+            String tableName) throws Exception {
+        if (databaseType.isPostgreSql()) {
+            String sql = "select case when i.indisprimary then 'PRIMARY' else ci.relname end as key_name, "
+                    + "a.attname as column_name, (ord.ordinality)::int as seq_in_index "
+                    + "from pg_index i "
+                    + "join pg_class ct on ct.oid = i.indrelid "
+                    + "join pg_namespace n on n.oid = ct.relnamespace "
+                    + "join pg_class ci on ci.oid = i.indexrelid "
+                    + "join unnest(i.indkey) with ordinality as ord(attnum, ordinality) on true "
+                    + "join pg_attribute a on a.attrelid = ct.oid and a.attnum = ord.attnum "
+                    + "where ct.relname = ? and n.nspname = ? and (i.indisprimary or i.indisunique) "
+                    + "order by key_name, seq_in_index";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, tableName);
+            ps.setString(2, schemaName);
+            return ps;
+        }
+
+        return conn.prepareStatement(String.format("show index from %s where Non_unique = 0", tableName));
+    }
+
+    private static String resolveSchema(Connection conn, DatabaseType databaseType) {
+        try {
+            if (databaseType.isPostgreSql()) {
+                try (PreparedStatement ps = conn.prepareStatement("select current_schema()");
+                        ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString(1);
+                    }
                 }
+                return "public";
             }
+
+            String schema = conn.getCatalog();
+            if (schema != null && !schema.isEmpty()) {
+                return schema;
+            }
+
+            DatabaseMetaData metaData = conn.getMetaData();
+            return metaData.getUserName();
+        } catch (Exception e) {
+            log.warn("解析schema失败，使用默认schema", e);
+            return databaseType.isPostgreSql() ? "public" : null;
+        }
+    }
+
+    private static class TableMeta {
+        private final String tableName;
+        private final String comment;
+
+        private TableMeta(String tableName, String comment) {
+            this.tableName = tableName;
+            this.comment = comment;
         }
     }
 
     private static class FieldInfoWithOrder {
         FieldInfo fieldInfo;
         int seq;
+
         FieldInfoWithOrder(FieldInfo fieldInfo, int seq) {
             this.fieldInfo = fieldInfo;
             this.seq = seq;
@@ -310,31 +311,17 @@ public class BuilderTable {
         return sb.toString();
     }
 
-    /**
-     * 将SQL类型转换为Java类型
-     * 使用增强的类型映射器，支持更多数据库类型
-     * 
-     * @param type SQL数据类型
-     * @return Java类型名称
-     */
     private static String ProcessJavaType(String type) {
         try {
-            // 使用新的类型映射器
             return SqlTypeMapper.getJavaType(type);
         } catch (Exception e) {
             log.error("类型转换失败，SQL类型: {}, 错误: {}", type, e.getMessage());
-            
-            // 回退到原有的类型映射逻辑
-            if (ArrayUtils.contains(Constants.SQL_INTEGER_TYPE, type)) {
-                return "Integer";
-            } else if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, type)
-                    || ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, type)) {
+
+            if (SqlTypeMapper.isNumericType(type)) {
+                return SqlTypeMapper.getJavaType(type);
+            } else if (SqlTypeMapper.isDateTimeType(type)) {
                 return "Date";
-            } else if (ArrayUtils.contains(Constants.SQL_DECIMAL_TYPE, type)) {
-                return "BigDecimal";
-            } else if (ArrayUtils.contains(Constants.SQL_LONG_TYPE, type)) {
-                return "Long";
-            } else if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, type)) {
+            } else if (SqlTypeMapper.isStringType(type)) {
                 return "String";
             } else {
                 log.warn("未识别的SQL类型: {}，使用String作为默认类型", type);
@@ -342,5 +329,4 @@ public class BuilderTable {
             }
         }
     }
-
 }

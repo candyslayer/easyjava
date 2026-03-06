@@ -6,13 +6,13 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.easyjava.bean.Constants;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
+import com.easyjava.utils.SqlTypeMapper;
 import com.easyjava.utils.StringUtils;
 
 //这个我写的是真的垃圾，我自己都不想看了
@@ -60,15 +60,14 @@ public class BuildQuery {
 
                 String propName = fieldInfo.getPropertyName();
 
-                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType())) {
+                if (SqlTypeMapper.isStringType(fieldInfo.getSqlType())) {
                     propName = propName + Constants.SUFFIX_BEAN_PARAM_FUZZY;
 
                     bw.write("\tprivate " + fieldInfo.getJavaType() + " " + propName + ";");
                     bw.newLine();
                 }
 
-                if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, fieldInfo.getSqlType())
-                        || ArrayUtils.contains(Constants.SQL_DATE_TYPE, fieldInfo.getSqlType())) {
+                if (SqlTypeMapper.isDateTimeType(fieldInfo.getSqlType())) {
                     bw.newLine();
                     bw.write("\tprivate  String " + " " + propName + Constants.SUFFIX_BEAN_PARAM_TIME_START + ";");
                     bw.newLine();
@@ -119,7 +118,7 @@ public class BuildQuery {
                 bw.newLine();
 
                 // 有fuzzy后缀的
-                if (ArrayUtils.contains(Constants.SQL_STRING_TYPE, fieldInfo.getSqlType())) {
+                if (SqlTypeMapper.isStringType(fieldInfo.getSqlType())) {
                     propName = propName + Constants.SUFFIX_BEAN_PARAM_FUZZY;
 
                     // 截断is前缀的set
@@ -156,8 +155,7 @@ public class BuildQuery {
                     bw.newLine();
                 }
 
-                if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, fieldInfo.getSqlType())
-                        || ArrayUtils.contains(Constants.SQL_DATE_TYPE, fieldInfo.getSqlType())) {
+                if (SqlTypeMapper.isDateTimeType(fieldInfo.getSqlType())) {
                     if (propName.startsWith("is")) {
                         bw.write("\t" + "public void " + "set" + tmpField.substring(2) + "(String"
                                 + " "

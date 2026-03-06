@@ -6,7 +6,6 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +13,7 @@ import com.easyjava.bean.Constants;
 import com.easyjava.bean.FieldInfo;
 import com.easyjava.bean.TableInfo;
 import com.easyjava.utils.DateUtils;
+import com.easyjava.utils.SqlTypeMapper;
 import com.easyjava.utils.StringUtils;
 
 public class BuildPo {
@@ -64,7 +64,7 @@ public class BuildPo {
             Boolean isBeanJsonIgnore = false;
 
             for (FieldInfo fieldInfo : tableInfo.getFieldList()) {
-                if (ArrayUtils.contains(Constants.IGNORE_BEAN_TOJSON_FIELD.split(","), fieldInfo.getPropertyName())) {
+                if (org.apache.commons.lang3.ArrayUtils.contains(Constants.IGNORE_BEAN_TOJSON_FIELD.split(","), fieldInfo.getPropertyName())) {
                     isBeanJsonIgnore = true;
                     break;
                 }
@@ -85,7 +85,7 @@ public class BuildPo {
             for (FieldInfo fieldInfo : tableInfo.getFieldList()) {
                 BuildComment.CreateFieldComment(bw, fieldInfo.getComment());
 
-                if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, fieldInfo.getSqlType())) {
+                if (SqlTypeMapper.isDateTimeWithTimeType(fieldInfo.getSqlType())) {
 
                     bw.write("\t" + String.format(Constants.BEAN_DATE_SERIALIZATION, DateUtils.YYYYMMDDHHMMSS));
                     bw.newLine();
@@ -94,7 +94,7 @@ public class BuildPo {
                     bw.newLine();
                 }
 
-                if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, fieldInfo.getSqlType())) {
+                if (SqlTypeMapper.isDateOnlyType(fieldInfo.getSqlType())) {
 
                     bw.write("\t" + String.format(Constants.BEAN_DATE_SERIALIZATION, DateUtils.YYYY_MM_DD));
                     bw.newLine();
@@ -102,7 +102,7 @@ public class BuildPo {
                     bw.newLine();
                 }
 
-                if (ArrayUtils.contains(Constants.IGNORE_BEAN_TOJSON_FIELD.split(","), fieldInfo.getPropertyName())) {
+                if (org.apache.commons.lang3.ArrayUtils.contains(Constants.IGNORE_BEAN_TOJSON_FIELD.split(","), fieldInfo.getPropertyName())) {
                     bw.write("\t" + Constants.IGNORE_BEAN_TOJSON_EXPRESSION);
                     bw.newLine();
                 }
@@ -151,10 +151,10 @@ public class BuildPo {
             for (FieldInfo fieldInfo : tableInfo.getFieldList()) {
 
                 String propName = fieldInfo.getPropertyName();
-                if (ArrayUtils.contains(Constants.SQL_DATE_TIME_TYPES, fieldInfo.getSqlType())) {
+                if (SqlTypeMapper.isDateTimeWithTimeType(fieldInfo.getSqlType())) {
                     propName = "DateUtil.Formate("+propName+", DateTimePatternEnum.YYYY_MM_DD_HH_MM_SS.GetPattern())";
 
-                } else if (ArrayUtils.contains(Constants.SQL_DATE_TYPE, fieldInfo.getSqlType())) {
+                } else if (SqlTypeMapper.isDateOnlyType(fieldInfo.getSqlType())) {
                     propName= "DateUtil.Formate(" + propName
                             + ", DateTimePatternEnum.YYYY_MM_DD.GetPattern())";
                 }
